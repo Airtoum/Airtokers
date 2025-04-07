@@ -1,0 +1,452 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "after"
+match_indent = false
+pattern = "-- TARGET: adding to hand effects"
+payload = '''local tomorrow_jokers = find_joker('j_toum_tomorrow_joker')
+if next(tomorrow_jokers) then
+    local num_topdeck_scoring_cards = 0
+    for i, v in ipairs(tomorrow_jokers) do
+        num_topdeck_scoring_cards = num_topdeck_scoring_cards + v.ability.extra.topdeck_cards_scored
+    end
+    for i=1,num_topdeck_scoring_cards do
+        local topdeck_card = G.deck and G.deck.cards[#G.deck.cards - i + 1] or nil
+        if topdeck_card then
+            table.insert(final_scoring_hand, topdeck_card)
+        end
+    end
+end
+'''
+
+## Setup scoring animations for cards in deck
+[[patches]]
+[patches.pattern]
+target = "functions/common_events.lua"
+position = "before"
+match_indent = false
+pattern = "elseif card.area == G.hand then"
+payload = '''elseif card.area == G.deck then
+        y_off = -0.15*G.CARD_H
+        card_aligned = 'tm'
+'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/common_events.lua"
+position = "before"
+match_indent = false
+pattern = "elseif card.area == G.hand or card.area == G.deck then"
+payload = '''elseif card.area == G.deck then
+        y_off = -0.15*G.CARD_H
+        card_aligned = 'tm'
+'''
+
+## SMODS bettercalc fix to get tomorrow joker to work
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "at"
+match_indent = false
+pattern = "SMODS.calculate_main_scoring({cardarea = v, full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands}, v == G.play and scoring_hand or nil)"
+payload = "SMODS.calculate_main_scoring({cardarea = v, full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands}, scoring_hand or nil)"
+
+## 
+##[[patches]]
+##[patches.pattern]
+##target = "functions/common_events.lua"
+##position = "after"
+##match_indent = false
+##pattern = '''elseif _c.set == 'Default' and specific_vars then 
+##        if specific_vars.nominal_chips then 
+##            localize{type = 'other', key = 'card_chips', nodes = desc_nodes, vars = {specific_vars.nominal_chips}}
+##        end
+##        if specific_vars.bonus_chips then
+##            localize{type = 'other', key = 'card_extra_chips', nodes = desc_nodes, vars = {specific_vars.bonus_chips}}
+##        end'''
+##payload = '''
+##if next(find_joker('j_toum_census')) then
+##            localize{type = 'other', key = 'toum_times_played_tip', nodes = desc_nodes, vars = {specific_vars.bonus_chips}}
+##        end'''
+
+
+## Add tooltip for times played if you have Census
+[[patches]]
+[patches.pattern]
+target = "functions/common_events.lua"
+position = "before"
+match_indent = false
+pattern = "for k, v in ipairs(badges) do"
+payload = '''if ((_c.set == 'Default' or _c.set == 'Enhanced') and next(find_joker('j_toum_census'))) then info_queue[#info_queue+1] = {key = 'toum_times_played_tip', set = 'Other', vars = {specific_vars.times_played}} end
+'''
+
+## Pass in times played into special vars for correct badge creation   
+[[patches]]
+[patches.regex]
+target = "card.lua"
+position = "before"
+match_indent = false
+pattern = "return generate_card_ui\\(self.config.center, nil, loc_vars, card_type, badges, hide_desc, main_start, main_end.*\\)"
+payload = '''
+loc_vars = loc_vars or {}; loc_vars.times_played = self.base.times_played
+'''
+
+## Copy times played into cards made for deck preview
+## THIS DOES NOTHING BECAUSE STEAMMODDED OVERRIDES THIS FUNCTION
+[[patches]]
+[patches.pattern]
+target = "functions/UI_definitions.lua"
+position = "after"
+match_indent = false
+pattern = "copy.T.y = view_deck.T.y"
+payload = '''
+          print(SUITS[suit_map[j]][i].base.times_played)
+          copy.debuff = true
+          copy.base.times_played = SUITS[suit_map[j]][i].base.times_played'''
+
+## Copy times played into cards made for deck preview
+## Why card_scale? Because card_scale is only used for setting up the deck preview. See above
+[[patches]]
+[patches.pattern]
+target = "functions/common_events.lua"
+position = "after"
+match_indent = false
+pattern = "new_card.pinned = other.pinned"
+payload = '''
+    if card_scale then
+        new_card.base.times_played = other.base.times_played
+    end'''
+
+## Setup my custom effects, for individual card
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "before"
+match_indent = false
+pattern = "--calculate the card edition effects"
+payload = '''
+SMODS.Mods['Airtokers'].check_custom_effects(effects[ii], scoring_hand[i], percent)
+'''
+
+## Setup my custom effects, for cards held in hand
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "before"
+match_indent = false
+pattern = "if effects[ii].message then"
+payload = '''
+mod_percent = SMODS.Mods['Airtokers'].check_custom_effects(effects[ii], G.hand.cards[i], percent, mod_percent) and mod_percent
+'''
+
+## Setup my custom effects' little UI squares
+[[patches]]
+[patches.pattern]
+target = "functions/common_events.lua"
+position = "before"
+match_indent = false
+pattern = "elseif eval_type == 'swap' then "
+payload = '''
+elseif SMODS.Mods['Airtokers'].does_match_any_custom_effect_for_card_eval_status_text(card, eval_type, amt, percent, dir, extra) then
+    local returned_from_airtokers = SMODS.Mods['Airtokers'].apply_custom_effects_to_card_eval_status_text(card, eval_type, amt, percent, dir, extra)
+    sound = returned_from_airtokers.sound or 'multhit2'
+    volume = returned_from_airtokers.volume or 0.7
+    amt = returned_from_airtokers.amt or amt or 1
+    text = returned_from_airtokers.text or localize{type='variable',key='a_xmult',vars={amt}}
+    colour = returned_from_airtokers.colour or G.C.XMULT
+    config.type = returned_from_airtokers['config.type'] or 'fade'
+    config.scale = returned_from_airtokers['config.scale'] or 0.7
+'''
+
+## Setup my custom effects, for cards joker effects
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "before"
+match_indent = false
+pattern = "if effects.jokers.Xmult_mod then mult = mod_mult(mult*effects.jokers.Xmult_mod);extras.mult = true  end"
+payload = '''
+SMODS.Mods['Airtokers'].joker_check_custom_effects(effects.jokers, extras)
+'''
+
+## Setup my custom effects, for cards joker on joker effects
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "before"
+match_indent = false
+pattern = "if effect.Xmult_mod then mult = mod_mult(mult*effect.Xmult_mod);extras.mult = true  end"
+payload = '''
+SMODS.Mods['Airtokers'].joker_check_custom_effects(effect, extras)
+'''
+
+## Create control character y for setting vertical offest
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "at"
+match_indent = false
+pattern = "y_offset = -0.6,"
+payload = "y_offset = -0.6 + (part.control.y and tonumber(part.control.y) or 0),"
+
+## Create control character y for setting vertical offest
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "after"
+match_indent = false
+pattern = "spacing = _spacing,"
+payload = "y_offset = (part.control.y and tonumber(part.control.y) or 0),"
+
+## Create control character y for setting vertical offest
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "after"
+match_indent = false
+pattern = "shadow = args.shadow,"
+payload = "y_offset = (part.control.y and tonumber(part.control.y) or 0),"
+
+## Use localization construction for attention text
+#[[patches]]
+#[patches.pattern]
+#target = "functions/UI_definitions.lua"
+#position = "after"
+#match_indent = false
+#pattern = "args.text = args.AT.UIRoot.children[1].config.object"
+#payload = '''localize{type='variable',key='a_log_mult',vars={2}, nodes = args.AT.UIRoot.children[1]}
+#print(#args.AT.UIRoot.children)'''
+
+## Permit use of localize function for Attention Text
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "before"
+match_indent = false
+pattern = "elseif args.type == 'variable' then"
+payload = '''elseif args.type == 'variable_attention_text' then
+    loc_target = G.localization.misc.v_dictionary_parsed[args.key]'''
+
+## Permit use of localize function for Attention Text
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "at"
+match_indent = false
+pattern = "for _, lines in ipairs(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or (args.type == 'text' or args.type == 'tutorial' or args.type == 'quips') and loc_target or loc_target.text_parsed) do"
+payload = "for _, lines in ipairs(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or (args.type == 'text' or args.type == 'tutorial' or args.type == 'quips') and loc_target or (args.type == 'variable_attention_text' and {loc_target}) or loc_target.text_parsed) do"
+
+## Permit use of localize function for Attention Text
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "before"
+match_indent = false
+pattern = "elseif part.control.E then"
+payload = '''elseif args.type == 'variable_attention_text' then -- inject start
+          final_line[#final_line+1] = {n=G.UIT.O, config={
+            object = DynaText({string = {assembled_string}, colours = {part.control.V and args.vars.colours[tonumber(part.control.V)] or (part.control.C and loc_colour(part.control.C)) or args.colour or loc_colour(nil)},
+            silent = true,
+            float = true,
+            shadow = true,
+            pop_in = 0,
+            pop_in_rate = 6,
+            maxw = args.maxw,
+            y_offset = (part.control.y and tonumber(part.control.y) or 0),
+            scale = (args.scale or 1)*(part.control.s and tonumber(part.control.s) or 1)})
+          }} -- inject end'''
+
+## Lets you pass in a function as the text to do just-in-time localization node tree construction for Attention Text
+[[patches]]
+[patches.pattern]
+target = "functions/UI_definitions.lua"
+position = "before"
+match_indent = false
+pattern = "{n=G.UIT.ROOT, config = {align = args.cover_align or 'cm', minw = (args.cover and args.cover.T.w or 0.001) + (args.cover_padding or 0), minh = (args.cover and args.cover.T.h or 0.001) + (args.cover_padding or 0), padding = 0.03, r = 0.1, emboss = args.emboss, colour = args.cover_colour}, nodes={"
+payload = '''type(args.text) == 'function' and (function(root_node) args.text(root_node, args); root_node.nodes = root_node.nodes[1]; return root_node end)({n=G.UIT.ROOT, config = {align = args.cover_align or 'cm', minw = (args.cover and args.cover.T.w or 0.001) + (args.cover_padding or 0), minh = (args.cover and args.cover.T.h or 0.001) + (args.cover_padding or 0), padding = 0.03, r = 0.1, emboss = args.emboss, colour = args.cover_colour}, nodes={}}) or'''
+
+## Does Attention Text animations for each DynaText instead of just the first one
+[[patches]]
+[patches.pattern]
+target = "functions/UI_definitions.lua"
+position = "after"
+match_indent = false
+pattern = "args.text:pulse(0.5)"
+payload = '''
+local extra_dynatext_children = nil
+if #args.AT.UIRoot.children >= 2 then
+    extra_dynatext_children = {}
+    for i = 2, #args.AT.UIRoot.children do
+        args.AT.UIRoot.children[i].config.object:pulse(0.5)
+        table.insert(extra_dynatext_children, args.AT.UIRoot.children[i].config.object)
+    end
+end
+'''
+
+## Does Attention Text animations for each DynaText instead of just the first one
+[[patches]]
+[patches.pattern]
+target = "functions/UI_definitions.lua"
+position = "after"
+match_indent = false
+pattern = "args.text:pop_out(3)"
+payload = '''
+if extra_dynatext_children then
+    for _, extra_dynatext in ipairs(extra_dynatext_children) do
+        extra_dynatext:pop_out(3)
+    end
+end
+'''
+
+## Make Attention Text for misc-effect effects (that don't do mult or chips)
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "before"
+match_indent = false
+pattern = "if extras.mult or extras.hand_chips then card_eval_status_text(v, 'jokers', nil, percent, nil, effect) end"
+payload = "if extras.misc then extras.mult = true end"
+
+## Make Mr. Bones work outside of rounds (both are 0)
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+position = "at"
+match_indent = false
+pattern = "G.GAME.chips/G.GAME.blind.chips >= 0.25 then"
+payload = "(G.GAME.chips/G.GAME.blind.chips >= 0.25 or G.GAME.chips == G.GAME.blind.chips) then"
+
+## Allow cardareas to not set rotation of a joker
+[[patches]]
+[patches.pattern]
+target = "cardarea.lua"
+position = "before"
+match_indent = false
+pattern = "card.T.r = 0.1*(-#self.cards/2 - 0.5 + k)/(#self.cards)+ (G.SETTINGS.reduced_motion and 0 or 1)*0.02*math.sin(2*G.TIMERS.REAL+card.T.x)"
+payload = "if not card.do_not_align_rotation then"
+
+[[patches]]
+[patches.pattern]
+target = "cardarea.lua"
+position = "after"
+match_indent = false
+pattern = "card.T.r = 0.1*(-#self.cards/2 - 0.5 + k)/(#self.cards)+ (G.SETTINGS.reduced_motion and 0 or 1)*0.02*math.sin(2*G.TIMERS.REAL+card.T.x)"
+payload = "end"
+
+[[patches]]
+[patches.pattern]
+target = "cardarea.lua"
+position = "after"
+match_indent = false
+pattern = '''for k, card in ipairs(self.cards) do
+        card.rank = k
+    end'''
+payload = '''for k, card in ipairs(self.cards) do
+        if card.angle then card.T.r = card.angle end
+    end'''
+
+# Make DynaText with a table possible for loc_vars
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "before"
+match_indent = false
+pattern = "local desc_scale = G.LANG.font.DESCSCALE"
+payload = '''
+-- pass to vars table with 'ref_table' and 'ref_value' keys. referenced by index in vars
+if part.control.D then 
+    assembled_string = args.vars[tonumber(part.control.D)]
+end
+'''
+
+# Conditional lines for localization function
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "after"
+match_indent = false
+pattern = "local final_line = {}"
+payload = "local skip_this_line = false"
+
+# Make DynaText with a table possible for loc_vars
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "before"
+match_indent = false
+pattern = "local desc_scale = G.LANG.font.DESCSCALE"
+payload = '''
+-- pass to vars table with a boolean to skip adding this line. referenced by index in vars
+if part.control.O then  -- O for "Omit if"
+    skip_this_line = skip_this_line or args.vars[tonumber(part.control.O)]
+end
+local skip_this_element = false
+-- pass to vars table with a boolean to skip adding this element. referenced by index in vars
+if part.control.o and args.vars[tonumber(part.control.o)] then  -- o for "omit if"
+    skip_this_element = true
+end
+'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "before"
+match_indent = false
+pattern = "if args.type == 'name' then"
+payload = "if not skip_this_element then"
+
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "before"
+match_indent = false
+pattern = "if args.type == 'name' or args.type == 'text' then return final_line end"
+payload = "end -- i hope this doesn't fuck anything up!"
+
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "at"
+match_indent = false
+pattern = "args.nodes[#args.nodes+1] = final_line"
+payload = '''if not skip_this_line then
+    args.nodes[#args.nodes+1] = final_line
+end'''
+
+# uncompressed save for testing
+[[patches]]
+[patches.pattern]
+target = "engine/string_packer.lua"
+position = "after"
+match_indent = false
+pattern = "local save_string = type(_data) == 'table' and STR_PACK(_data) or _data"
+payload = "love.filesystem.write(_file..'.txt',save_string)"
+
+# Big in card_eval_status_text
+[[patches]]
+[patches.pattern]
+target = "functions/common_events.lua"
+position = "at"
+match_indent = false
+pattern = "if amt > 0 or amt < 0 then"
+payload = "if SMODS.Mods['Airtokers'].number_greater_than(SMODS.Mods['Airtokers'].number(amt), SMODS.Mods['Airtokers'].number(0)) or SMODS.Mods['Airtokers'].number_less_than(SMODS.Mods['Airtokers'].number(amt), SMODS.Mods['Airtokers'].number(0)) then  -- Talisman BigNum/OmegaNum for Joker return values"
+
+# attempt to fix omeganum (this did not work)
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "after"
+match_indent = false
+pattern = "if O_type == 'table' then"
+payload = '''
+    if getmetatable(O) ~= nil and getmetatable(O) == BigMeta then return Big:new(O) end
+    if getmetatable(O) ~= nil and getmetatable(O) == OmegaMeta then
+        return O:clone() 
+    end
+'''
+
