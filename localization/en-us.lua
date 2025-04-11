@@ -35,8 +35,11 @@ return {
             a_sign_chips="Sign!",
             a_digit_increase_chips="Increment Digits!",
             a_eulers_totient_function_chips="Euler's Totient Function!",
+            a_distance_mult="Distance to #1# Mult",
             exp_joker_rank_of_suit_infix = ' of ',
             exp_joker_enhancement_qualifier = ' that is a ',
+            k_plus_cards = '+#1# cards!',
+            k_plus_distance="+#1# Distance",
         },
     },
 }

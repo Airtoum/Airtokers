@@ -135,6 +135,26 @@ local function number_round_towards_positive_infinity(a)
     return math.floor(a - number(0.5)) + number(1) -- number() just in case somehow
 end
 
+local function number_abs(a)
+    if is_positive(a) then
+        return a
+    else
+        return a * number(-1)
+    end
+end
+
+local function velocitize(n, naked_zero)
+    if is_positive(n) then
+        return '+'..format_ui_value(n)
+    elseif is_negative(n) then
+        return '-'..format_ui_value(n)
+    elseif naked_zero then
+        return format_ui_value(n)
+    else
+        return '+'..format_ui_value(n)
+    end
+end
+
 -- sanity checks
 
 if false then
@@ -895,7 +915,7 @@ local original_cardarea_emplace = CardArea.emplace
 function CardArea:emplace(card, location, stay_flipped, a4, a5, a6, a7, a8, a9) -- any extra arguments another mod might add
     local return_value = original_cardarea_emplace(self, card, location, stay_flipped, a4, a5, a6, a7, a8, a9)
     if G and G.jokers and G.jokers.cards and G.hand and G.hand.cards then
-        SMODS.calculate_context({emplace_card = true, card = card})
+        SMODS.calculate_context({emplace_card = true, card = card, area = self})
     end
     return return_value
 end
@@ -1644,9 +1664,209 @@ SMODS.Joker {
     end
 }
 
+table.insert(final_setups, function ()
+    for k, v in pairs(Airtokers.custom_effects) do
+        print('Airtokers has '.. k)
+    end
+end)
+
+
+--- 1 extra hand of cards is drawn when opening booster packs
+SMODS.Joker{
+    key = 'card_rack',
+    loc_txt = {
+        name = "Card Rack",
+        text = {
+            "Draw an {C:attention}extra{} hand of cards",
+            "when opening a {C:attention}Booster Pack",
+        },
+    },
+    config = {},
+    loc_vars = function()
+        
+    end,
+    rarity = 1,
+    atlas = "Airtokers",
+    pos = {x = 0, y = 0},
+    cost = 2,
+    calculate = function(self, card, context)
+        if context.open_booster then
+            G.E_MANAGER:add_event(Event({
+                func = function(t)
+                    G.E_MANAGER:add_event(Event({
+                        func = function(t)
+                            G.E_MANAGER:add_event(Event({
+                                func = function(t)
+                                    local message = localize { type = 'variable', key = 'k_plus_cards', vars = { G.hand.config.card_limit } }
+                                    card_eval_status_text(card, 'extra', nil, nil, nil, { message = message })
+                                    local num_cards_already_in_hand = math.max(#G.hand.cards, 1)
+                                    print(num_cards_already_in_hand)
+                                    for i = 1, G.hand.config.card_limit do 
+                                        draw_card(G.deck,G.hand, (num_cards_already_in_hand + i)*100/num_cards_already_in_hand,'up', true)
+                                    end
+                                    return true
+                                end
+                            }))
+                            return true
+                        end
+                    }))
+                    return true
+                end
+            }))
+            return {
+                -- something happened!
+            }
+        end
+    end    
+}
+
+Airtokers.custom_effects.distance_mult = {
+    core = function(amount)
+        mult = mod_mult(number_abs(mult - number(amount)))
+    end,
+    mult = true,
+    chips = false,
+    translation_key = 'a_distance_mult',
+    colour = G.C.MULT,
+    sound = 'multhit1',
+    volume = 1,
+    amt = nil,
+    ['config.scale'] = 0.5,
+}
+
+-- draw card context
+local original_draw_card = draw_card
+function draw_card(from, to, percent, dir, sort, card, delay, mute, stay_flipped, vol, discarded_only, a12, a13, a14, a15, a16) -- any extra arguments another mod might add
+    local return_value = original_draw_card(from, to, percent, dir, sort, card, delay, mute, stay_flipped, vol, discarded_only, a12, a13, a14, a15, a16) -- normally returns nil but whatever
+    if G and G.jokers and G.jokers.cards and G.hand and G.hand.cards then
+        SMODS.calculate_context({draw_card = true, card = card, from = from, to = to})
+    end
+    return return_value
+end
+
+--- applies distance to 6 to mult. distance target increases by 4 whenever drawing a card that is exactly 10 ranks away from the previously drawn card.
+SMODS.Joker{
+    key = 'boundary_stone',
+    loc_txt = {
+        name = "Boundary Stone",
+        text = {
+            "Applies {C:mult}Distance to #1#{} to Mult",
+            "Gains {C:mult}#2# Distance{} when drawn card is exactly",
+            "ten ranks away from previously drawn card",
+        },
+    },
+    config = { 
+        extra = {
+            distance_mult = number(6),
+            distance_mult_gain = number(1),
+            previous_drawn_rank = nil,
+        },
+    },
+    loc_vars = function(self, info_queue, card)
+        return { vars = { 
+            card.ability.extra.distance_mult,
+            velocitize(card.ability.extra.distance_mult_gain),
+        } }
+    end,
+    rarity = 1,
+    atlas = "Airtokers",
+    pos = {x = 0, y = 0},
+    cost = 2,
+    calculate = function(self, card, context)
+        if context.joker_main then
+            return {
+                distance_mult = card.ability.extra.distance_mult,
+            }
+        end
+        if context.emplace_card and context.area == G.hand then
+            local matched = false
+            local current_drawn_rank = context.card:get_id()
+            if (
+                card.ability.extra.previous_drawn_rank and
+                current_drawn_rank and
+                type(card.ability.extra.previous_drawn_rank) == 'number' and
+                type(current_drawn_rank) == 'number' and
+                (
+                    math.abs(card.ability.extra.previous_drawn_rank - current_drawn_rank) == 10 or 
+                    (card.ability.extra.previous_drawn_rank == 14 and current_drawn_rank == 11) or
+                    (card.ability.extra.previous_drawn_rank == 11 and current_drawn_rank == 14)
+                )
+            ) then
+                matched = true
+            end
+            print(card.ability.extra.previous_drawn_rank)
+            card.ability.extra.previous_drawn_rank = context.card:get_id()
+            if matched then
+                card.ability.extra.distance_mult = card.ability.extra.distance_mult + card.ability.extra.distance_mult_gain
+                card:juice_up(0.5, 0.5)
+                return {
+                    focus = context.card,
+                    message = localize { type = 'variable', key = 'k_plus_distance', vars = { card.ability.extra.distance_mult_gain } },
+                    colour = G.C.MULT,
+                    front_of_event_queue = true,
+                }
+            end
+        end
+    end    
+}
+
+--- Gives +mult equal to the difference between point value on played cards (K, Q, J, 10 all share a floor)
+SMODS.Joker{
+    key = 'elevator',
+    loc_txt = {
+        name = "Elevator",
+        text = {
+            "Each scored card gives {C:mult}+Mult",
+            "equal to how different its {C:chips}Chips{} value is",
+            "from the previous scored card"
+        },
+    },
+    config = {},
+    loc_vars = function()
+        
+    end,
+    rarity = 3,
+    atlas = "Airtokers",
+    pos = {x = 0, y = 0},
+    cost = 13,
+    calculate = function(self, card, context)
+        if context.individual and context.scoring_hand then
+            local other_card_index = nil
+            for i, v in ipairs(context.scoring_hand) do
+                if v == context.other_card then
+                    other_card_index = i
+                    break
+                end
+            end
+            if not other_card_index then
+                return nil
+            end
+            local prior_card = context.scoring_hand[other_card_index - 1]
+            if not prior_card then
+                return nil
+            end
+            -- very heavy bonus card, stone card, and hiker synergy
+            local difference = number(prior_card:get_chip_bonus()) - number(context.other_card:get_chip_bonus())
+            difference = math.abs(difference)
+            if is_zero(difference) then
+                return nil
+            end
+            return {
+                mult = difference,
+                card = card,
+            }
+        end
+    end    
+}
+-- after some testing holy CRAP is this powerful. I don't have the heart to add a downside or nerf it so I made it Rare and expensive
+
+
+--- A random cycle of ranks is setup for this seed. Each played card will have its rank set to the next in the cycle.
+--- Apply Rental to a random joker if played hand contains no Spades. Convert chips from radians to degrees if played hand contains no Spades.
+
+
 
 --- final setups!
-
 
 for _, func in ipairs(final_setups) do
     func()

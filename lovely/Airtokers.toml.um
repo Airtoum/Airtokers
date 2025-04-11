@@ -450,3 +450,18 @@ payload = '''
     end
 '''
 
+# lets you put card eval status text at the front of the event queue
+[[patches]]
+[patches.pattern]
+target = "functions/common_events.lua"
+position = "at"
+match_indent = false
+pattern = '''
+return true
+                    end
+            }))'''
+payload = '''
+   return true
+                    end
+            }), nil, extra and extra.front_of_event_queue)'''
+
