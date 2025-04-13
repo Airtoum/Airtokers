@@ -465,3 +465,37 @@ payload = '''
                     end
             }), nil, extra and extra.front_of_event_queue)'''
 
+# more easing types since quad is backwards
+[[patches]]
+[patches.pattern]
+target = "engine/event.lua"
+position = "before"
+match_indent = false
+pattern = "if self.ease.type == 'quad' then"
+payload = '''
+    if self.ease.type == 'sqrt' then
+        percent_done = percent_done ^ 0.5;
+        self.ease.ref_table[self.ease.ref_value] = self.func(percent_done*self.ease.start_val + (1-percent_done)*self.ease.end_val)
+    end
+    if self.ease.type == 'quad_reverse' then
+        percent_done = 1 - ((1 - percent_done) ^ 2);
+        self.ease.ref_table[self.ease.ref_value] = self.func(percent_done*self.ease.start_val + (1-percent_done)*self.ease.end_val)
+    end
+    if self.ease.type == 'sqrt_reverse' then
+        percent_done = 1 - ((1 - percent_done) ^ 0.5);
+        self.ease.ref_table[self.ease.ref_value] = self.func(percent_done*self.ease.start_val + (1-percent_done)*self.ease.end_val)
+    end
+'''
+
+# custom buying requirements
+[[patches]]
+[patches.pattern]
+target = "functions/button_callbacks.lua"
+position = "after"
+match_indent = false
+pattern = "G.FUNCS.check_for_buy_space = function(card)"
+payload = '''
+    if card.config.center and card.config.center.custom_check_for_buy_space then
+        return card.config.center:custom_check_for_buy_space(card, card.edition and card.edition.negative)
+    end
+'''

@@ -1810,6 +1810,107 @@ SMODS.Joker{
     end    
 }
 
+SMODS.Sound {
+    key = 'elevatorcrash1',
+    path = 'SuperCrash.wav',
+}
+SMODS.Sound {
+    key = 'elevatorcable1',
+    path = 'elevator_cable1.ogg',
+}
+SMODS.Sound {
+    key = 'elevatorcable2',
+    path = 'elevator_cable2.ogg',
+}
+
+local original_cardarea_align_cards = CardArea.align_cards
+function CardArea:align_cards(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+    local previous_states_drag_is = {}
+    for k, card in ipairs(self.cards) do
+        if card.do_not_align_to_cardarea then 
+            previous_states_drag_is[card] = card.states.drag.is
+            card.states.drag.is = true
+        end
+    end 
+    local return_value = original_cardarea_align_cards(self, a1, a2, a3, a4, a5, a6, a7, a8, a9)
+    for k, card in ipairs(self.cards) do
+        if card.do_not_align_to_cardarea then 
+            card.states.drag.is = previous_states_drag_is[card]
+        end
+    end 
+    return return_value
+end
+
+function Card:elevator_crash()
+    G.E_MANAGER:add_event(Event({
+        func = function(t)
+            self.do_not_align_to_cardarea = true
+            return true
+        end,
+    }))
+    G.E_MANAGER:add_event(Event({
+        trigger = 'ease',
+        ease = 'lerp',
+        blocking = false,
+        ref_table = { dummy = 0 },
+        ref_value = 'dummy',
+        ease_to = 1,
+        delay = 1.8,
+        func = function(t)
+            if math.random() > 0.8 then
+                play_sound('toum_elevatorcable'..math.random(2), 1 + t + (math.random() * 0.3), 1.5)
+            end
+            return t
+        end,
+    }))
+    local fall_distance = 14
+    G.E_MANAGER:add_event(Event({
+        trigger = 'ease',
+        ease = 'quad_reverse',
+        blockable = false,
+        ref_table = self.T,
+        ref_value = 'y',
+        ease_to = self.T.y + fall_distance,
+        delay =  1.4,
+        func = (function(t) return t end)
+    }))
+    G.E_MANAGER:add_event(Event({
+        trigger = 'ease',
+        ease = 'quad_reverse',
+        blockable = false,
+        ref_table = self.VT,
+        ref_value = 'y',
+        ease_to = self.VT.y + fall_distance,
+        delay =  1.4,
+        func = (function(t) return t end)
+    }))
+    G.E_MANAGER:add_event(Event({
+        func = function(t)
+            G.ROOM.jiggle = G.ROOM.jiggle + 67
+            play_sound('toum_elevatorcrash1')
+            return true
+        end,
+    }))
+    G.E_MANAGER:add_event(Event({
+        trigger = 'after',
+        blockable = false,
+        delay = 1.4,
+        func = (function() 
+            self:remove() 
+            return true 
+        end)
+    }))
+end
+
+local function enqueue(func) 
+    G.E_MANAGER:add_event(Event({
+        func = function()
+            func()
+            return true
+        end,
+    }))
+end
+
 --- Gives +mult equal to the difference between point value on played cards (K, Q, J, 10 all share a floor)
 SMODS.Joker{
     key = 'elevator',
@@ -1818,17 +1919,43 @@ SMODS.Joker{
         text = {
             "Each scored card gives {C:mult}+Mult",
             "equal to how different its {C:chips}Chips{} value is",
-            "from the previous scored card"
+            "from the previous scored card",
+            "{s:0.8,C:inactive,O:1}(Needs a consumable slot for installation)",
         },
     },
-    config = {},
-    loc_vars = function()
-        
+    config = {
+    },
+    loc_vars = function(self, info_queue, card)
+        return { vars = { 
+            card.added_to_deck,
+        } }
     end,
     rarity = 3,
     atlas = "Airtokers",
     pos = {x = 0, y = 0},
     cost = 13,
+    custom_check_for_buy_space = function(self, card, is_negative)
+        if not (#G.jokers.cards < G.jokers.config.card_limit + (is_negative and 1 or 0)) then
+            alert_no_space(card, G.jokers)
+            return false
+        end
+        if not (#G.consumeables.cards < G.consumeables.config.card_limit + (is_negative and 1 or 0)) then
+            alert_no_space(card, G.consumeables)
+            return false
+        end
+        return true
+    end,
+    add_to_deck = function(self, card, from_debuff)
+        if not from_debuff then
+            play_sound('timpani')
+            local counterweight = create_card('elevator_part', G.consumeables, nil, nil, nil, nil, 'c_toum_counterweight', 'fool')
+            if card.edition then
+                counterweight:set_edition(card.edition)
+            end
+            counterweight:add_to_deck()
+            G.consumeables:emplace(counterweight)
+        end
+    end,
     calculate = function(self, card, context)
         if context.individual and context.scoring_hand then
             local other_card_index = nil
@@ -1859,6 +1986,59 @@ SMODS.Joker{
     end    
 }
 -- after some testing holy CRAP is this powerful. I don't have the heart to add a downside or nerf it so I made it Rare and expensive
+
+--- this is the balance for Elevator. or rather, the counterbalance
+
+SMODS.ConsumableType {
+    key = 'elevator_part',
+    primary_colour = G.C.GREY,
+    secondary_colour = G.C.GREY,
+    loc_txt = {
+        name = 'Elevator Part',
+        collection = 'Elevator Parts',
+    },
+    shop_rate = 0.0,
+}
+
+SMODS.Consumable {
+    key = 'counterweight',
+    set = 'elevator_part',
+    loc_txt = {
+        name = "Counterweight",
+        text = {
+            "Sell this to crash an Elevator",
+        },
+    },
+    config = {
+        consumeable = nil,
+    },
+    loc_vars = function()
+    end,
+    atlas = "Airtokers",
+    pos = {x = 0, y = 0},
+    add_to_deck = function(self, card, from_debuff)
+        card.ability.consumeable = nil
+        if card.children.use_button then card.children.use_button:remove(); card.children.use_button = nil end
+    end,
+    load = function(self, card, card_table, other_card)
+        card.ability.consumeable = nil
+        if card.children.use_button then card.children.use_button:remove(); card.children.use_button = nil end
+    end,
+    calculate = function(self, card, context)
+        if context.selling_self then
+            local _, first_elevator = next(SMODS.find_card('j_toum_elevator'))
+            if not first_elevator then
+                return nil
+            end
+            return {
+                func = function()
+                    first_elevator:elevator_crash()
+                end,
+            }
+        end
+    end
+
+}
 
 
 --- A random cycle of ranks is setup for this seed. Each played card will have its rank set to the next in the cycle.

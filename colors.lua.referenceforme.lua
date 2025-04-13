@@ -78,8 +78,8 @@ local C = {
             Voucher = #424e54,
         }, 
         SECONDARY_SET = {
-            Default = HEX("9bb6bdFF"),
-            Enhanced = HEX("8389DDFF"),
+            Default = #9bb6bdFF,
+            Enhanced = #8389DDFF,
             Joker = #708b91,
             Tarot = #a782d1,--#29adff,
             Planet = #13afce,

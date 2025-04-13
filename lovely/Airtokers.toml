@@ -464,3 +464,38 @@ payload = '''
    return true		 -- Airtokers! // >⏝o )\
                     end		 -- Airtokers! // >⏝o )\
             }), nil, extra and extra.front_of_event_queue)		 -- Airtokers! // >⏝o )\'''
+
+# more easing types since quad is backwards
+[[patches]]
+[patches.pattern]
+target = "engine/event.lua"
+position = "before"
+match_indent = false
+pattern = "if self.ease.type == 'quad' then"
+payload = '''
+    if self.ease.type == 'sqrt' then		 -- Airtokers! // >⏝o )\
+        percent_done = percent_done ^ 0.5;		 -- Airtokers! // >⏝o )\
+        self.ease.ref_table[self.ease.ref_value] = self.func(percent_done*self.ease.start_val + (1-percent_done)*self.ease.end_val)		 -- Airtokers! // >⏝o )\
+    end		 -- Airtokers! // >⏝o )\
+    if self.ease.type == 'quad_reverse' then		 -- Airtokers! // >⏝o )\
+        percent_done = 1 - ((1 - percent_done) ^ 2);		 -- Airtokers! // >⏝o )\
+        self.ease.ref_table[self.ease.ref_value] = self.func(percent_done*self.ease.start_val + (1-percent_done)*self.ease.end_val)		 -- Airtokers! // >⏝o )\
+    end		 -- Airtokers! // >⏝o )\
+    if self.ease.type == 'sqrt_reverse' then		 -- Airtokers! // >⏝o )\
+        percent_done = 1 - ((1 - percent_done) ^ 0.5);		 -- Airtokers! // >⏝o )\
+        self.ease.ref_table[self.ease.ref_value] = self.func(percent_done*self.ease.start_val + (1-percent_done)*self.ease.end_val)		 -- Airtokers! // >⏝o )\
+    end		 -- Airtokers! // >⏝o )\
+'''
+
+# custom buying requirements
+[[patches]]
+[patches.pattern]
+target = "functions/button_callbacks.lua"
+position = "after"
+match_indent = false
+pattern = "G.FUNCS.check_for_buy_space = function(card)"
+payload = '''
+    if card.config.center and card.config.center.custom_check_for_buy_space then		 -- Airtokers! // >⏝o )\
+        return card.config.center:custom_check_for_buy_space(card, card.edition and card.edition.negative)		 -- Airtokers! // >⏝o )\
+    end		 -- Airtokers! // >⏝o )\
+'''
