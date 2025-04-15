@@ -499,3 +499,21 @@ payload = '''
         return card.config.center:custom_check_for_buy_space(card, card.edition and card.edition.negative)
     end
 '''
+
+# add useless consumables
+[[patches]]
+[patches.pattern]
+target = "functions/UI_definitions.lua"
+position = "before"
+match_indent = false
+pattern = "use"
+payload = "(not card.ability.useless_consumable and"
+
+[[patches]]
+[patches.pattern]
+target = "functions/UI_definitions.lua"
+position = "after"
+match_indent = false
+pattern = "use"
+payload = "or nil)"
+

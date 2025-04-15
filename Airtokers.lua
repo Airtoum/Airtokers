@@ -1840,6 +1840,26 @@ SMODS.Sound {
     key = 'elevatorcable2',
     path = 'elevator_cable2.ogg',
 }
+SMODS.Sound {
+    key = 'ploop1',
+    path = 'ploop1.ogg',
+}
+SMODS.Sound {
+    key = 'ploop2',
+    path = 'ploop2.ogg',
+}
+SMODS.Sound {
+    key = 'ploop3',
+    path = 'ploop5.ogg',
+}
+SMODS.Sound {
+    key = 'ploop4',
+    path = 'ploop4.ogg',
+}
+SMODS.Sound {
+    key = 'ploop5',
+    path = 'ploop5.ogg',
+}
 
 local original_cardarea_align_cards = CardArea.align_cards
 function CardArea:align_cards(a1, a2, a3, a4, a5, a6, a7, a8, a9)
@@ -1902,10 +1922,17 @@ function Card:elevator_crash()
         delay =  1.4,
         func = (function(t) return t end)
     }))
+    if G.GAME.blind.name == 'The Water' then
+        delay(0.3)
+    end
     G.E_MANAGER:add_event(Event({
         func = function(t)
-            G.ROOM.jiggle = G.ROOM.jiggle + 67
-            play_sound('toum_elevatorcrash1')
+            if G.GAME.blind.name == 'The Water' then
+                play_sound('toum_ploop'..math.random(5), 1, 5)
+            else
+                G.ROOM.jiggle = G.ROOM.jiggle + 67
+                play_sound('toum_elevatorcrash1')
+            end
             return true
         end,
     }))
@@ -1917,15 +1944,6 @@ function Card:elevator_crash()
             self:remove() 
             return true 
         end)
-    }))
-end
-
-local function enqueue(func) 
-    G.E_MANAGER:add_event(Event({
-        func = function()
-            func()
-            return true
-        end,
     }))
 end
 
@@ -1951,7 +1969,7 @@ SMODS.Joker{
     rarity = 3,
     atlas = "Airtokers",
     pos = {x = 0, y = 0},
-    cost = 13,
+    cost = 8,
     custom_check_for_buy_space = function(self, card, is_negative)
         if not (#G.jokers.cards < G.jokers.config.card_limit + (is_negative and 1 or 0)) then
             alert_no_space(card, G.jokers)
@@ -1966,7 +1984,7 @@ SMODS.Joker{
     add_to_deck = function(self, card, from_debuff)
         if not from_debuff then
             play_sound('timpani')
-            local counterweight = create_card('elevator_part', G.consumeables, nil, nil, nil, nil, 'c_toum_counterweight', 'fool')
+            local counterweight = create_card('elevator_part', G.consumeables, nil, nil, nil, nil, 'c_toum_counterweight', 'elevator')
             if card.edition then
                 counterweight:set_edition(card.edition)
             end
@@ -2004,6 +2022,7 @@ SMODS.Joker{
     end    
 }
 -- after some testing holy CRAP is this powerful. I don't have the heart to add a downside or nerf it so I made it Rare and expensive
+-- after some more thought, yes it is powerful but it's not *that* powerful. I think I can keep it a rare and lower the price
 
 --- this is the balance for Elevator. or rather, the counterbalance
 
@@ -2035,12 +2054,10 @@ SMODS.Consumable {
     atlas = "Airtokers",
     pos = {x = 0, y = 0},
     add_to_deck = function(self, card, from_debuff)
-        card.ability.consumeable = nil
-        if card.children.use_button then card.children.use_button:remove(); card.children.use_button = nil end
+        card.ability.useless_consumable = true
     end,
     load = function(self, card, card_table, other_card)
-        card.ability.consumeable = nil
-        if card.children.use_button then card.children.use_button:remove(); card.children.use_button = nil end
+        card.ability.useless_consumable = true
     end,
     calculate = function(self, card, context)
         if context.selling_self then
