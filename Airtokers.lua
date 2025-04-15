@@ -48,8 +48,8 @@ local function identity(x)
     return x
 end
 
-local function is_big(a)
-    return type(x) == 'table' and ((x.e and x.m) or (x.array and x.sign))
+local function is_big(x)
+    return (type(x) == 'table') and ((x.e and x.m) or (x.array and x.sign))
 end
 Airtokers.is_big = is_big
 
@@ -608,7 +608,25 @@ end
 
 Airtokers.custom_effects.log_mult = {
     core = function(amount)
-        mult = mod_mult(math.log(mult, amount))
+        local result = nil
+        if is_big(amount) or is_big(mult) then
+            if number(mult).logBase then
+                result = number(mult):logBase(number(amount))
+            else
+                result = number(mult):log(number(amount))
+            end
+        else
+            print(inspect(amount))
+            print(inspect(mult))
+            print(is_big(amount))
+            print(is_big(mult))
+            print((amount.array and amount.sign) and true or false)
+            print((mult.array and mult.sign) and true or false)
+            assert(type(amount) ~= 'table')
+            assert(type(mult) ~= 'table')
+            result = math.log(mult, amount)
+        end
+        mult = mod_mult(result)
     end,
     mult = true,
     chips = false,
@@ -1857,7 +1875,7 @@ function Card:elevator_crash()
         ease_to = 1,
         delay = 1.8,
         func = function(t)
-            if math.random() > 0.8 then
+            if math.random() + (t/10) > 0.8 then
                 play_sound('toum_elevatorcable'..math.random(2), 1 + t + (math.random() * 0.3), 1.5)
             end
             return t
