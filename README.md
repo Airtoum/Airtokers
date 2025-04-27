@@ -30,3 +30,5 @@ elevator_cable1.ogg and elevator_cable2.ogg were recorded by me! I made them by 
 ploop1.ogg, ploop2.ogg, ploop3.ogg, ploop4.ogg, and ploop5.ogg were also recorded by me. I made it by dropping a d20 into a very large cup. I also put a paper towel at the bottom of the cup for some of them to dampen the rattle of the dice hitting the bottom.
 
 The idea for the elevator making a water drop sound when facing the water was from Hyperspade
+
+The name "Euler's Curse" is from ItsPhoenix
