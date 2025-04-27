@@ -17,7 +17,7 @@ local function primitive_math_sign(n)
 end
 
 local function number(n)
-    if to_big then
+    if to_big and Big then
         local return_n
         if Big.array and type(n) == 'number' then 
             return_n = to_big({n}, primitive_math_sign(n))
@@ -340,13 +340,103 @@ SMODS.Joker {
     cost = 4,
 }
 
--- does not work at all with saving
+-- saving hook
+local original_card_save = Card.save
+function Card:save(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+    if self.config and self.config.center and self.config.center.toum_on_save and type(self.config.center.toum_on_save) == 'function' then
+        self.config.center:toum_on_save(self)
+    end
+    local return_value = original_card_save(self, a1, a2, a3, a4, a5, a6, a7, a8, a9)
+    return return_value
+end
+
+local original_g_uidef_view_deck = G.UIDEF.view_deck
+function G.UIDEF.view_deck(unplayed_only, a2, a3, a4, a5, a6, a7, a8, a9)
+    local unmodified_playing_cards = {}
+    for i, card in ipairs(G.playing_cards) do
+        unmodified_playing_cards[i] = card
+    end
+    local original_playing_cards = G.playing_cards
+    local filtered_playing_cards = {}
+    for i, card in ipairs(G.playing_cards) do
+        if card and card.area and card.area.separate_container_for_playing_cards and not G.UIDEF.view_deck_param_actually_view_mini_deck then
+           -- pass 
+        else
+            table.insert(filtered_playing_cards, card)
+        end
+    end
+    G.playing_cards = filtered_playing_cards
+    local return_value = original_g_uidef_view_deck(unplayed_only, a2, a3, a4, a5, a6, a7, a8, a9)
+    G.playing_cards = original_playing_cards
+    return return_value
+end
+
+--- this is fucking dumb
+G.UIDEF.view_deck_param_actually_view_mini_deck = false
+function G.UIDEF.view_mini_deck(mini_deck)
+    local original_playing_cards = G.playing_cards
+    local cards_in_deck_to_view = mini_deck.cards
+    G.playing_cards = cards_in_deck_to_view
+    G.UIDEF.view_deck_param_actually_view_mini_deck = true
+    local return_value = G.UIDEF.view_deck(false)
+    G.UIDEF.view_deck_param_actually_view_mini_deck = false
+    G.playing_cards = original_playing_cards
+    return return_value
+end
+
+function G.UIDEF.mini_deck_info(mini_deck)
+    return create_UIBox_generic_options({contents ={create_tabs(
+      {tabs = {
+        {
+          label = localize('b_full_deck'),
+          chosen = true,
+          tab_definition_function = G.UIDEF.view_mini_deck,
+          tab_definition_function_args = mini_deck,
+        },
+      },
+      tab_h = 8,
+      snap_to_nav = true}
+    )}})
+end
+
+G.FUNCS.mini_deck_info = function(e)
+    G.SETTINGS.paused = true
+    if G.deck_preview then 
+      G.deck_preview:remove()
+      G.deck_preview = nil
+    end
+    G.FUNCS.overlay_menu{
+      definition = G.UIDEF.mini_deck_info( e -- pass in deck?
+      ),
+    }
+  end
+
+local original_cardarea_click = CardArea.click
+function CardArea:click(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+    local return_value = original_cardarea_click(self, a1, a2, a3, a4, a5, a6, a7, a8, a9)
+    if self.mini_deck then 
+        G.FUNCS.mini_deck_info(self.area)
+    end
+    return return_value
+end
+
+local original_card_click = Card.click
+function Card:click(a1, a2, a3, a4, a5, a6, a7, a8, a9) 
+    local return_value = original_card_click(self, a1, a2, a3, a4, a5, a6, a7, a8, a9)
+    if self.area and self.area ~= G.deck and self.area.mini_deck and self.area.cards[1] == self then 
+        G.FUNCS.mini_deck_info(self.area)
+    end
+end
+
+-- needs special hook for saving
 SMODS.Joker {
+    shrunken_scale = 0.2,
+    inverse_shrunken_scale = 1 / 0.2,
     key = 'hungry_joker',
     loc_txt = {
         name = "Hungry Joker",
         text = {
-            "When blind is selected, {C:attention}swallows{}",
+            "When exiting shop, {C:attention}swallows{}",
             "{C:attention}#1#{} card from your deck.",
             "When sold, returns all {C:attention}swallowed{}",
             "cards to hand (or to deck)."
@@ -361,23 +451,51 @@ SMODS.Joker {
     pos = {x = 0, y = 0},
     -- swallows 1 card from your deck when blind is selected. when sold, returns all swallowed cards back to your deck 
     cost = 3,
+    set_ability = function(self, card, initial, delay_sprites)
+        card.swallowed = CardArea(0, 0, 0, 0, {card_limit = 500, type = 'deck'})
+        -- perhaps incorporate the offset and scale into the final design of the card. leave a hole in the art?
+        card.swallowed:set_alignment({major = card, bond = 'Strong', type = 'bm', offset = {x = 0, y = 0.1} })
+        card.swallowed.separate_container_for_playing_cards = true
+        card.swallowed.mini_deck = true
+    end,
+    toum_on_save = function(self, card)
+        card.ability.extra.swallowed = card.swallowed:save()
+    end,
+    load = function(self, card, card_table, other_card) -- i'm pretty sure other_card is vestigial
+        card.swallowed = CardArea(0, 0, 0, 0, {card_limit = 500, type = 'deck'})
+        card.swallowed:set_alignment({major = card, bond = 'Strong', type = 'bm', offset = {x = 0, y = 0.1} })
+        card.swallowed.separate_container_for_playing_cards = true
+        card.swallowed.mini_deck = true
+        card.swallowed:load(card_table.ability.extra.swallowed)
+        for i, v in ipairs(card.swallowed.cards) do
+            v.T.h = v.T.h * self.shrunken_scale
+            v.T.w = v.T.w * self.shrunken_scale
+        end
+    end,
     calculate = function(self, card, context)
-        local shrunken_scale = 0.2
-        local inverse_shrunken_scale = 1 / shrunken_scale
-        if context.ending_shop then
-            local swallowed_card = pseudorandom_element(G.deck.cards, pseudoseed('hungry'))
-            if card.swallowed == nil then
-                card.swallowed = CardArea(0, 0, 0, 0, {card_limit = 500, type = 'deck'})
-                -- perhaps incorporate the offset and scale into the final design of the card. leave a hole in the art?
-                card.swallowed:set_alignment({major = card, bond = 'Strong', type = 'bm', offset = {x = 0, y = 0.1} })
+        if context.ending_shop and not context.blueprint then
+            local cards_to_swallow = {}
+            for i, card_to_swallow in ipairs(G.deck.cards) do
+                if not card_to_swallow.swallowed_by_toum_hungry_joker then
+                    table.insert(cards_to_swallow, card_to_swallow)
+                end
             end
+            local swallowed_card = pseudorandom_element(cards_to_swallow, pseudoseed('hungry'))
+            -- local swallowed_card = G.deck.cards[1]
+            if card.swallowed == nil then
+                error('Hungry Joker did not have a CardArea')
+            end
+            if not swallowed_card then
+                return nil
+            end
+            swallowed_card.swallowed_by_toum_hungry_joker = true
             G.E_MANAGER:add_event(Event({
                 trigger = 'ease',
                 ease = 'elastic',
                 blockable = false,
                 ref_table = swallowed_card.T,
                 ref_value = 'h',
-                ease_to = swallowed_card.T.h * shrunken_scale,
+                ease_to = swallowed_card.T.h * self.shrunken_scale,
                 delay =  0.4,
                 func = (function(t) return t end)
             }))
@@ -387,41 +505,66 @@ SMODS.Joker {
                 blockable = false,
                 ref_table = swallowed_card.T,
                 ref_value = 'w',
-                ease_to = swallowed_card.T.w * shrunken_scale,
+                ease_to = swallowed_card.T.w * self.shrunken_scale,
                 delay =  0.4,
                 func = (function(t) return t end)
             }))
             draw_card(G.deck, card.swallowed, 50, 'down', false, swallowed_card)
+            G.E_MANAGER:add_event(Event({
+                func = function()
+                    swallowed_card.swallowed_by_toum_hungry_joker = nil
+                    return true
+                end,
+            }))
             return {
                 
             }
         end
-        if context.selling_self then
+        if context.selling_self and not context.blueprint then
             local spill_cards_into = #G.hand.cards > 0 and G.hand or G.deck
             for i, swallowed_card in ipairs(card.swallowed.cards) do
                 G.E_MANAGER:add_event(Event({
                     trigger = 'ease',
                     ease = 'elastic',
+                    blocking = false,
                     blockable = false,
                     ref_table = swallowed_card.T,
                     ref_value = 'h',
-                    ease_to = swallowed_card.T.h * inverse_shrunken_scale,
+                    ease_to = swallowed_card.T.h * self.inverse_shrunken_scale,
                     delay =  0.4,
                     func = (function(t) return t end)
                 }))
                 G.E_MANAGER:add_event(Event({
                     trigger = 'ease',
                     ease = 'elastic',
+                    blocking = false,
                     blockable = false,
                     ref_table = swallowed_card.T,
                     ref_value = 'w',
-                    ease_to = swallowed_card.T.w * inverse_shrunken_scale,
+                    ease_to = swallowed_card.T.w * self.inverse_shrunken_scale,
                     delay =  0.4,
                     func = (function(t) return t end)
                 }))
                 draw_card(card.swallowed, spill_cards_into, 50, 'down', false, swallowed_card)
             end
-            return true
+            return {}
+        end
+    end,
+    remove_from_deck = function(self, card, from_debuff)
+        if not from_debuff then
+            for i, v in ipairs(card.swallowed) do
+                v:start_dissolve()
+            end
+            G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                blockable = false,
+                func = function()
+                    card.swallowed:remove()
+                    card.swallowed = nil
+                    return true
+                end,
+                delay =  1.06*0.7,
+            }))
         end
     end
 }
@@ -449,7 +592,6 @@ SMODS.Joker {
     },
     config = { extra = { mult = number(30) }},
     loc_vars = function(self, info_queue, card)
-        debug.debug()
         return { vars = {
             card.ability.extra.mult,
             count_played_cards(),
@@ -462,13 +604,11 @@ SMODS.Joker {
     pos = {x = 0, y = 0},
     cost = 6,
     set_ability = function(self, card, initial, delay_sprites)
-        card.ability.extra.mult = self.config.extra.mult:clone()
+        --card.ability.extra.mult = self.config.extra.mult:clone()
     end,
     calculate = function(self, card, context)
         if context.joker_main then
             if count_played_cards() >= #G.playing_cards then
-                print('to_big', to_big)
-                print('type(card.ability.extra.mult)', type(card.ability.extra.mult))
                 return {
                     mult_mod = card.ability.extra.mult,
                     message = localize { type = 'variable', key = 'a_mult', vars = { card.ability.extra.mult } }
@@ -490,14 +630,6 @@ SMODS.Joker {
     },
     config = { extra = { mult = number(17), mult_gain = number(-3) * 1 }},
     loc_vars = function(self, info_queue, card)
-        print('hahaha you read it!')
-        print(card.ability.extra.mult)
-        print(card.ability.extra.mult_gain)
-        print(card.ability.extra.mult_gain.array)
-        print(card.ability.extra.mult_gain.sign)
-        print(tprint(card.ability.extra.mult_gain.array))
-        --print(tprint(card.ability.extra.mult_gain.sign))
-        print(getmetatable(card.ability.extra.mult_gain))
         card.ability.extra.mult = card.ability.extra.mult + card.ability.extra.mult_gain
         return { vars = {
             card.ability.extra.mult,
@@ -616,12 +748,6 @@ Airtokers.custom_effects.log_mult = {
                 result = number(mult):log(number(amount))
             end
         else
-            print(inspect(amount))
-            print(inspect(mult))
-            print(is_big(amount))
-            print(is_big(mult))
-            print((amount.array and amount.sign) and true or false)
-            print((mult.array and mult.sign) and true or false)
             assert(type(amount) ~= 'table')
             assert(type(mult) ~= 'table')
             result = math.log(mult, amount)
@@ -666,10 +792,9 @@ SMODS.Joker {
         text = {
             "Applies {C:red}log{C:red,y:20,E:3}#1#{} Mult",
             "On the {C:attention}final hand{} of round,",
-            "Jokers to the left",
-            "each give {C:money}$#2#{}",
-            "for every Joker to the",
-            "left of this card",
+            "Jokers to the left each give {C:money}$#2#{}",
+            "for every Joker to the left",
+            "of this card",
             "{C:inactive}(Currently {C:money}$#3#{C:inactive} each)"
             -- "each give {C:money}$#2# for every {C:money}#3# you have",
             -- "{C:inactive}(Max of {C:money}$#4#{C:inactive} each)",
@@ -768,15 +893,6 @@ end
 
 local function exp_mult_disclaimer(amount_raw)
     local amount = number(amount_raw)
-    print(inspect(amount), inspect(number(0)))
-    print('amount', amount.m, amount.e)
-    print('0', number(0).m, number(0).e)
-    print('amount', tprint(amount.array or {}), amount.sign)
-    print('0', tprint(number(0).array or {}), number(0).sign)
-    print('amount', amount.array[1], amount.sign)
-    print('0', number(0).array[1], number(0).sign)
-    print('number_greater_than', number_greater_than(amount, number(0)))
-    print('number_greater_than_or_equal', number_greater_than_or_equal(amount, number(0)))
     if number_greater_than(amount, number(math.exp(math.exp(-1)))) then
         return { '(Always increases mult)', '', '', '', '', always=true }
     elseif number_greater_than(amount, number(1)) then
@@ -795,8 +911,7 @@ SMODS.Joker {
     loc_txt = {
         name = "Exp Joker",
         text = {
-            "Applies {C:red}#22##1##23#^{} Mult if",
-            "scored hand has:",
+            "Applies {C:red}#22##1##23#^{} Mult if scored hand has:",
             "{C:attention}#2#{}#3#{V:1}#4#{}#5#{C:attention}#6#{}",
             "{C:attention}#7#{}#8#{V:2}#9#{}#10#{C:attention}#11#{}",
             "{C:attention}#12#{}#13#{V:3}#14#{}#15#{C:attention}#16#{}",
@@ -923,8 +1038,17 @@ function SMODS.calculate_individual_effect(effect, scored_card, key, amount, fro
 end
 
 table.insert(final_setups, function()
+    local index_of_extra = nil
+    for i, calc_key in ipairs(SMODS.calculation_keys) do
+        if calc_key == 'extra' then
+            index_of_extra = i
+            break
+        end
+    end
+    -- extra must happen after my custom effects.
+    assert(index_of_extra, "Could not find calculation key 'extra' in SMODS.calculation_keys. :(")
     for custom_effect_name, custom_effect in pairs(Airtokers.custom_effects) do
-        table.insert(SMODS.calculation_keys, custom_effect_name)
+        table.insert(SMODS.calculation_keys, index_of_extra, custom_effect_name)
     end
 end)
 
@@ -1600,6 +1724,21 @@ local function is_prime(n)
     return true
 end
 
+local function get_prime_factorization(n)
+    n = math.abs(n)
+    local prime_factorization =  {}
+    local prime_index = 1
+    local last_prime_index = #primes_up_to_1000000
+    while number_greater_than(n, number(1)) and prime_index <= last_prime_index do
+        while number_equal(n % number(primes_up_to_1000000[prime_index]), number(0)) do
+            n = n / number(primes_up_to_1000000[prime_index])
+            prime_factorization[primes_up_to_1000000[prime_index]] = (prime_factorization[primes_up_to_1000000[prime_index]] or 0) + 1
+        end
+        prime_index = prime_index + 1
+    end
+    return prime_factorization, n
+end
+
 local function eulers_totient_function(n)
     n = number_round_towards_positive_infinity(n)
     local original_n = n
@@ -1611,16 +1750,7 @@ local function eulers_totient_function(n)
     if (number_greater_than(n, number(100000000))) then
         return original_n * number(6 / (math.PI ^ 2))
     end
-    local prime_factorization =  {}
-    local prime_index = 1
-    local last_prime_index = #primes_up_to_1000000
-    while number_greater_than(n, number(1)) and prime_index <= last_prime_index do
-        while number_equal(n % number(primes_up_to_1000000[prime_index]), number(0)) do
-            n = n / number(primes_up_to_1000000[prime_index])
-            prime_factorization[primes_up_to_1000000[prime_index]] = (prime_factorization[primes_up_to_1000000[prime_index]] or 0) + 1
-        end
-        prime_index = prime_index + 1
-    end
+    local prime_factorization, n = get_prime_factorization(n)
     if number_greater_than(n, number(1)) then
         if is_prime(n) then
             prime_factorization[n] = 1
@@ -1651,32 +1781,128 @@ Airtokers.custom_effects.eulers_totient_function_chips = {
 
 -- 6000
 assert(number_equal(eulers_totient_function(number(5*5*5*2*2*2*2*3)), number(1600)))
-print(eulers_totient_function(number(-27)))
+assert(number_equal(eulers_totient_function(number(-27)), number(-18)))
+--print(eulers_totient_function(number(-27))) -- -18
 
+-- shoutout to https://math.stackexchange.com/questions/1363950/average-lcma-b-1-le-a-le-b-le-n-and-asymptotic-behavior
+-- for the formula (0.18269074235) * x^2
+local function least_common_multiple(a, b)
+    if is_zero(a) and is_zero(b) then
+        return number(0)
+    end
+    if is_zero(a) or is_zero(b) then -- 0 and nonzero have no lcm (if it were zero, then lcm(2, 3) is 0 as well)
+        return nan
+    end
+    if is_positive(a) ~= is_positive(b) then -- different signs implies no LCM (i am not counting -8 as a multiple of 2)
+        return nan
+    end
+    if number_equal(a, b) then -- lcm(x, x) = x
+        return a
+    end
+    local multiplied_by = number(1)
+    if is_negative(a) then
+        a = a * number(-1)
+        b = b * number(-1)
+        multiplied_by = multiplied_by * number(-1)
+    end
+    if number_equal(number_abs(a - b), number(1)) then -- two consecutive numbers are always coprime and share no factors, but lcm(-2, -3) is still -6
+        return (a * b) * multiplied_by
+    end
+    for i = 1, 4 do -- lets us calculate LCM for rationals, truncated to 4 decimal digits if possible
+        if number_less_than(a, number(1000000)) and number_less_than(b, number(1000000)) then
+            a = a * number(10)
+            b = b * number(10)
+            multiplied_by = multiplied_by * number(10)
+        end
+    end
+    -- algorithm only works for positive integers
+    a = number_round_towards_positive_infinity(a)
+    b = number_round_towards_positive_infinity(b)
+    if (number_greater_than(a, number(100000000))) or (number_greater_than(b, number(100000000))) then
+        return (a * b) * number(0.18269074235) / multiplied_by -- honestly probably a really shit approximation, this is a guess
+    end
+    local a_is_prime = is_prime(a)
+    local b_is_prime = is_prime(b)
+    if b_is_prime or a_is_prime then
+        return (a * b) / multiplied_by
+    end
+    local prime_factorization_a, quotient_a = get_prime_factorization(a)
+    local prime_factorization_b, quotient_b = get_prime_factorization(b)
+    if number_greater_than(quotient_a, number(1)) then
+        if is_prime(quotient_a) then
+            prime_factorization_a[quotient_a] = 1
+        else
+            return (a * b) * number(0.18269074235) / multiplied_by
+        end
+    end
+    if number_greater_than(quotient_b, number(1)) then
+        if is_prime(quotient_b) then
+            prime_factorization_b[quotient_b] = 1
+        else
+            return (a * b) * number(0.18269074235) / multiplied_by
+        end
+    end
+    local lcm_prime_factorization = prime_factorization_a
+    for p, b_m in pairs(prime_factorization_b) do
+        local a_m = lcm_prime_factorization[p]
+        lcm_prime_factorization[p] = math.max(a_m or 0, b_m) -- lcm(8, 12) is 24. 8 is 2*2*2 and 12 is 2*2*3, and 24 is 2*2*2*3.
+    end
+    local product = number(1)
+    for p, m in pairs(lcm_prime_factorization) do
+        product = product * (number(p) ^ number(m))
+    end
+    return product / multiplied_by
+end
+
+assert(number_equal(least_common_multiple(number(2*2*2), number(2*2*3)), number(2*2*2*3)))
+assert(number_equal(least_common_multiple(number(-6), number(-8)), number(-24)))
+assert(number_equal(least_common_multiple(number(0.9), number(1.15)), number(20.7)))
+assert(number_equal(least_common_multiple(number(0), number(0)), number(0)))
+
+Airtokers.custom_effects.lcm_mult = {
+    core = function(amount)
+        mult = mod_chips(least_common_multiple(mult, amount))
+    end,
+    mult = true,
+    chips = false,
+    translation_key = 'a_lcm_mult',
+    colour = G.C.MULT,
+    sound = 'multhit2',
+    volume = 1,
+    amt = nil,
+    ['config.scale'] = 0.5,
+}
 
 SMODS.Joker {
-    key = 'test_joker',
+    key = 'eulers_curse',
     loc_txt = {
-        name = "Test Joker",
+        name = "Euler's Curse",
         text = {
-            --"{C:chips}Digit reverses{} chips",
-            "Applies {C:chips}Euler's totient function{} to chips",
+            "Applies {C:chips}Euler's totient function{} to Chips",
+            "Applies {C:mult}Least common multiple with #1#{} to Mult"
         },
     },
-    config = {},
-    loc_vars = function()
-        
+    config = {
+        extra = {
+            lcm_mult = 4,
+        },
+    },
+    loc_vars = function(self, info_queue, card)
+        return { vars = { 
+            card.ability.extra.lcm_mult,
+        } }
     end,
-    rarity = 1,
+    rarity = 3,
     atlas = "Airtokers",
     pos = {x = 0, y = 0},
     cost = 2,
     calculate = function(self, card, context)
         if context.joker_main then
             return {
-                --digit_reverse_chips = 1,
-                --digit_invert_chips = 1,
                 eulers_totient_function_chips = 1,
+                extra = {
+                    lcm_mult = card.ability.extra.lcm_mult
+                },
             }
         end
     end
@@ -1861,6 +2087,7 @@ SMODS.Sound {
     path = 'ploop5.ogg',
 }
 
+-- allows cards to move while still in a cardarea card.with do_not_align_to_cardarea
 local original_cardarea_align_cards = CardArea.align_cards
 function CardArea:align_cards(a1, a2, a3, a4, a5, a6, a7, a8, a9)
     local previous_states_drag_is = {}
@@ -2075,9 +2302,343 @@ SMODS.Consumable {
 
 }
 
+local function list_to_effect_tower(effects)
+    if #effects == 0 then return nil end
+    local working_effect = {}
+    local total_effect = working_effect
+    for i, effect in ipairs(effects) do
+        if i ~= 1 then
+            working_effect.extra = {}
+            working_effect = working_effect.extra
+        end
+        for k, v in pairs(effect) do
+            working_effect[k] = v
+        end
+    end
+    return total_effect
+end
 
 --- A random cycle of ranks is setup for this seed. Each played card will have its rank set to the next in the cycle.
+SMODS.Joker{
+    key = 'transmutation',
+    loc_txt = {
+        name = "Transmutation",
+        text = {
+            "Every played card will transmute",
+            "into another rank. Transmutations are",
+            "consistent for the duration of this run.",
+        },
+    },
+    config = {
+    },
+    loc_vars = function(self, info_queue, card)
+        return { vars = { 
+        } }
+    end,
+    rarity = 2,
+    atlas = "Airtokers",
+    pos = {x = 0, y = 0},
+    cost = 7,
+    start_of_run_setup = function(self)
+        G.GAME.toum_transmutation_mapping = {}
+        local ranks = {}
+        for k, v in pairs(SMODS.Ranks) do
+            table.insert(ranks, v)
+        end
+        pseudoshuffle(ranks, pseudoseed('transmutation'))
+        for i, v in ipairs(ranks) do
+            print(tprint(v))
+            G.GAME.toum_transmutation_mapping[ranks[i].key] = ranks[(i % #ranks) + 1].key
+        end
+    end,
+    calculate = function(self, card, context)
+        if context.before and context.full_hand and #context.full_hand > 1 then
+            for i, card in ipairs(context.full_hand) do
+                G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.08,func = function() context.full_hand[i]:flip();play_sound('card1', percent);context.full_hand[i]:juice_up(0.3, 0.3);return true end }))
+            end
+            for i, card in ipairs(context.full_hand) do
+                G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.08,func = function() 
+                    assert(SMODS.change_base(card, nil, G.GAME.toum_transmutation_mapping[card.base.value]), 'setting the base failed! you should punch airtoum')
+                    return true
+                end }))
+                --[[local next_effect = {}
+                next_effect.func = function()
+                    card:juice_up(0.5, 0.5)
+                    play_sound('')
+                    assert(SMODS.change_base(card, nil, G.GAME.toum_transmutation_mapping[card.base.value]), 'setting the base failed! you should punch airtoum')
+                end
+                table.insert(effects, next_effect)
+                --]]
+            end
+            for i=1, #context.full_hand do
+                local percent = 0.85 + (i-0.999)/(#context.full_hand-0.998)*0.3
+                G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.08,func = function() context.full_hand[i]:flip();play_sound('tarot2', percent, 0.6);context.full_hand[i]:juice_up(0.3, 0.3);return true end }))
+            end
+            return {}
+        end
+    end
+}
+
+local function reversed_table(t)
+    local reversed = {}
+    for i = #t, 1, -1 do
+        table.insert(reversed, t[i])
+    end
+    return reversed
+end
+Airtokers.reversed_table = reversed_table
+
+local function reverse_table(t)
+    for i = 1, math.floor(#t / 2) do
+        t[i], t[#t - i + 1] = t[#t - i + 1], t[i]
+    end
+end
+Airtokers.reverse_table = reverse_table
+
+
+local original_smods_get_card_areas = SMODS.get_card_areas
+SMODS.get_card_areas = function(_type, _context, a3, a4, a5, a6, a7, a8, a9)
+    local return_value = original_smods_get_card_areas(_type, _context, a3, a4, a5, a6, a7, a8, a9)
+    if next(find_joker('j_toum_antitime')) then
+        return reversed_table(return_value)
+    end
+    return return_value
+end
+
+
+SMODS.Joker{
+    key = 'antitime',
+    loc_txt = {
+        name = "Antitime",
+        text = {
+            "Scoring order is reversed",
+        },
+    },
+    config = {
+    },
+    loc_vars = function(self, info_queue, card)
+        return { vars = { 
+        } }
+    end,
+    rarity = 2,
+    atlas = "Airtokers",
+    pos = {x = 0, y = 0},
+    cost = 4,
+}
+
+--[[
+local original_g_funcs_hand_chip_ui_set = G.FUNCS.hand_chip_UI_set
+G.FUNCS.hand_chip_UI_set = function(e)
+    local return_value = original_g_funcs_hand_chip_ui_set(e)
+    print('G.GAME.current_round.current_hand.chip_text: ', G.GAME.current_round.current_hand.chip_text)
+    print('scale_number of negative: ', scale_number(-2, 0.9, 1000))
+    return return_value
+end
+--]]
+
+local integer_precision_limit = number(2 ^ 52)
+
+Airtokers.custom_effects.x_odds = {
+    core = function(amount)
+        for k, v in pairs(G.GAME.probabilities) do 
+            local unmodifided_probability = G.GAME.probabilities[k]
+            local new_value = unmodifided_probability*amount
+            if not number_greater_than(math.abs(new_value), integer_precision_limit) then
+                G.GAME.probabilities[k] = new_value
+                G.E_MANAGER:add_event(Event({
+                    func = function(t)
+                        G.E_MANAGER:add_event(Event({
+                            func = function(t)
+                                G.GAME.probabilities[k] = G.GAME.probabilities[k]/amount
+                                return true
+                            end,
+                        }))
+                        return true
+                    end,
+                }))
+            end
+        end
+    end,
+    mult = false,
+    chips = false,
+    misc = true,
+    translation_key = 'a_x_odds',
+    colour = G.C.GREEN,
+    sound = 'multhit2',
+    volume = 0.7,
+    amt = nil,
+    ['config.scale'] = 0.7,
+}
+
+Airtokers.custom_effects.plus_odds = {
+    core = function(amount)
+        for k, v in pairs(G.GAME.probabilities) do 
+            local unmodifided_probability = G.GAME.probabilities[k]
+            local new_value = v+amount
+            if not number_greater_than(math.abs(new_value), integer_precision_limit) then
+                G.GAME.probabilities[k] = new_value
+                G.E_MANAGER:add_event(Event({
+                    func = function(t)
+                        G.E_MANAGER:add_event(Event({
+                            func = function(t)
+                                G.GAME.probabilities[k] = v-amount
+                                return true
+                            end,
+                        }))
+                        return true
+                    end,
+                }))
+            end
+        end
+    end,
+    mult = false,
+    chips = false,
+    misc = true,
+    translation_key = 'a_plus_odds',
+    colour = G.C.GREEN,
+    sound = 'multhit1',
+    volume = 0.7,
+    amt = nil,
+    ['config.scale'] = 0.7,
+}
+
+SMODS.Joker{
+    key = 'seven_footed_rabbit',
+    loc_txt = {
+        name = "Seven-Footed Rabbit",
+        text = {
+            "When scored, each {C:attention}7{} has a {C:green}#2# in #3#{} chance",
+            "to give {X:green,C:white}X#1#{} Odds to",
+            "{C:attention}listed{} {C:green,E:1,S:1.1}probabilities{} for scored hand",
+        },
+    },
+    config = {
+        extra = {
+            x_odds = 2,
+            odds = 3,
+        },
+    },
+    loc_vars = function(self, info_queue, card)
+        return { vars = {
+            card.ability.extra.x_odds,
+            (G.GAME.probabilities.normal or 1) * 2,
+            card.ability.extra.odds,
+        } }
+    end,
+    rarity = 3,
+    atlas = "Airtokers",
+    pos = {x = 0, y = 0},
+    cost = 1,
+    calculate = function(self, card, context)
+        if (
+            context.individual and
+            context.scoring_hand and
+            context.other_card and
+            SMODS.in_scoring(context.other_card, context.scoring_hand) and
+            context.other_card:get_id() == 7 and
+            pseudorandom('seven_footed_rabbit') < (G.GAME.probabilities.normal * 2) / card.ability.extra.odds
+        ) then
+            return {
+                x_odds = card.ability.extra.x_odds,
+                card = context.other_card,
+            }
+        end
+    end,
+}
+
+
+SMODS.Joker {
+    key = 'menu',
+    loc_txt = {
+        name = "Menu",
+        text = {
+            "{O:1}Converts Chips from {C:chips}Radians to degrees",
+            "{O:2}Converts Chips from {C:chips}Degrees to radians",
+            "{O:3}Applies {C:chips}Sign{} to Chips",
+            "{O:4}Applies {C:chips}Successor{} to Chips",
+            "{O:5,C:chips}Negates{} Chips",
+            "{O:6,C:chips}Inverts digits{} in Chips",
+            "{O:7,C:chips}Reverses digits{} in Chips",
+            "{O:8}Applies {C:chips}Euler's totient function{} to Chips",
+            "{O:9}Applies {C:chips}Absolute value{} to Chips",
+            "{O:10,C:chips}Increments digits{} in Chips",
+            "Effect changes after hand is played",
+        },
+    },
+    config = {
+        extra = {
+            effect_choices = {
+                { index = 1,  effect_type = 'rad_2_deg_chips',               amount = 1, }, -- good
+                { index = 2,  effect_type = 'deg_2_rad_chips',               amount = 1, }, -- bad
+                { index = 3,  effect_type = 'sign_chips',                    amount = 1, }, -- bad
+                { index = 4,  effect_type = 'succ_chips',                    amount = 1, }, -- nothing
+                { index = 5,  effect_type = 'negate_chips',                  amount = 1, }, -- bad
+                { index = 6,  effect_type = 'digit_invert_chips',            amount = 1, }, -- good
+                { index = 7,  effect_type = 'digit_reverse_chips',           amount = 1, }, -- good
+                { index = 8,  effect_type = 'eulers_totient_function_chips', amount = 1, }, -- bad
+                { index = 9,  effect_type = 'abs_chips',                     amount = 1, }, -- nothing
+                { index = 10, effect_type = 'increase_digits_chips',         amount = 1, }, -- good
+            },
+            current_effect = nil,
+        },
+    },
+    loc_vars = function(self, info_queue, card)
+        local vars = {}
+        card.ability.extra.current_effect = card.ability.extra.current_effect or { effect_type = 'message', amount = 'ERROR' }
+        for i = 1, #card.ability.extra.effect_choices do
+            table.insert(vars, card.ability.extra.current_effect.index ~= i)
+        end
+        return { vars = vars }
+    end,
+    rarity = 1,
+    atlas = "Airtokers",
+    pos = {x = 0, y = 0},
+    cost = 2,
+    set_ability = function(self, card, initial, delay_sprites)
+        G.E_MANAGER:add_event(Event({
+            func = (function(t)
+                card.ability.extra.current_effect = pseudorandom_element(card.ability.extra.effect_choices, pseudoseed('yeah_ill_get_uhhhhhhh'))
+                return true
+            end),
+        }))
+    end,
+    calculate = function(self, card, context)
+        if context.joker_main then
+            if not card.ability.extra.current_effect then
+                sendErrorMessage('Menu\'s current effect was nil', 'airtokers-menu')
+                card.ability.extra.current_effect = { effect_type = 'message', amount = 'ERROR' }
+            end
+            return {
+                [card.ability.extra.current_effect.effect_type] = card.ability.extra.current_effect.amount,
+            }
+        end
+        if context.after then
+            local choosable_effects = {}
+            for i, v in ipairs(card.ability.extra.effect_choices) do
+                if v ~= card.ability.extra.current_effect then
+                    choosable_effects[#choosable_effects + 1] = v
+                end
+            end
+            print(tprint(choosable_effects))
+            card.ability.extra.current_effect = pseudorandom_element(choosable_effects, pseudoseed('yeah_ill_get_uhhhhhhh'))
+            return {
+                message = localize('k_reset'),
+                colour = G.C.CHIPS,
+            }
+        end
+    end
+}
+
 --- Apply Rental to a random joker if played hand contains no Spades. Convert chips from radians to degrees if played hand contains no Spades.
+--- Gains +1 Chips when joker to the right is triggered. Gains -1 Chips joker to the left is triggered. Does nothing if not between two jokers.
+--- After first played hand is played and scored, it is played and scored again
+--- Each played 7 giveds x2 Odds for the scored hand
+--- Gains +1 Odds when a Spectral card is used (Currently +0 to all listed probabilities)
+--- This joker contains a chip score box times a grey mult box. Whenever a chip effect happens, it also happens to the value within this card's chip score box.
+------ When this Joker is scored, its chips and grey mult get multiplied together, and then added to your round score, and then they reset.
+------ After normal scoring ends, the numbers in this card do not reset, so you may desync this chips with the normal chips.
+------ Setting chips from selecting a hand only updates this card's chip score when this card's chip score is 0.
+
 
 
 

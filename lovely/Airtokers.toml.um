@@ -1,7 +1,7 @@
 [manifest]
 version = "1.0.0"
 dump_lua = true
-priority = 0
+priority = 1
 
 [[patches]]
 [patches.pattern]
@@ -54,7 +54,24 @@ target = "functions/state_events.lua"
 position = "at"
 match_indent = false
 pattern = "SMODS.calculate_main_scoring({cardarea = v, full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands}, v == G.play and scoring_hand or nil)"
-payload = "SMODS.calculate_main_scoring({cardarea = v, full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands}, scoring_hand or nil)"
+payload = "SMODS.calculate_main_scoring({cardarea = v, full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands}, v ~= G.hand and scoring_hand or nil)"
+
+# SMODS tweak so unscored cards in deck aren't treated as treated as unscored in played hand
+[[patches]]
+[patches.pattern]
+target = '''=[SMODS _ "src/utils.lua"]'''
+position = "before"
+match_indent = false
+pattern = "if in_scoring then context.cardarea = G.play else context.cardarea = 'unscored' end"
+payload = "local true_cardarea = context.cardarea"
+
+[[patches]]
+[patches.pattern]
+target = '''=[SMODS _ "src/utils.lua"]'''
+position = "after"
+match_indent = false
+pattern = "if in_scoring then context.cardarea = G.play else context.cardarea = 'unscored' end"
+payload = "if true_cardarea == G.deck and not in_scoring then context.cardarea = 'undrawn' end"
 
 ## 
 ##[[patches]]
@@ -121,6 +138,15 @@ payload = '''
     if card_scale then
         new_card.base.times_played = other.base.times_played
     end'''
+
+# do not reset times_played when base is set
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+position = "at"
+match_indent = false
+pattern = "times_played = 0"
+payload = "times_played = self.base and self.base.times_played or 0"
 
 ## Setup my custom effects, for individual card
 [[patches]]
@@ -517,3 +543,38 @@ match_indent = false
 pattern = "use"
 payload = "or nil)"
 
+# add custom run setup for centers
+[[patches]]
+[patches.pattern]
+target = "game.lua"
+position = "after"
+match_indent = false
+pattern = "reset_castle_card()"
+payload = '''
+    for k, v in pairs(G.P_CENTERS) do
+        if v and v.start_of_run_setup and type(v.start_of_run_setup) == 'function' then
+            v:start_of_run_setup(v)
+        end
+    end
+'''
+
+# jokers triggered twice
+#[[patches]]
+#[patches.pattern]
+#target = '''=[SMODS _ "src/utils.lua"]'''
+#position = "after"
+#match_indent = false
+#pattern = "-- TARGET: add your own CardAreas for joker evaluation"
+#payload = '''
+#    table.insert(t, G.jokers)
+#'''
+
+#[[patches]]
+#[patches.pattern]
+#target = "functions/button_callbacks.lua"
+#position = "after"
+#match_indent = false
+#pattern = "G.GAME.current_round.current_hand.chip_text = new_chip_text"
+#payload = '''
+#G.GAME.current_round.current_hand.chip_text = '-1'
+#'''

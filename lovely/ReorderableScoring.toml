@@ -1,0 +1,214 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = -2
+
+# re-orderable scoring
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "after"
+match_indent = false
+pattern = "mult = mod_mult(G.GAME.hands[text].mult)"
+payload = '''
+    local function set_score_from_hand()
+'''
+times = 1
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "before"
+match_indent = false
+pattern = "if G.GAME.first_used_hand_level and G.GAME.first_used_hand_level > 0 then"
+payload = '''
+    end
+    local function score_first_used_hand_level()
+'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "after"
+match_indent = false
+pattern = "-- context.before calculations"
+payload = '''
+    end
+    local function score_before_context()
+'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "after"
+match_indent = false
+pattern = "-- TARGET: effects before scoring starts"
+payload = '''
+    end
+    local function set_score_from_hand_if_modified()
+'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "before"
+match_indent = false
+pattern = "local modded = false"
+payload = '''
+    end
+    local function score_blind_mod()
+'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "before"
+match_indent = false
+pattern = "for _, v in ipairs(SMODS.get_card_areas('playing_cards')) do"
+payload = '''
+    end
+    local function score_main_card_scoring()
+'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "before"
+match_indent = false
+pattern = "--Joker Effects"
+payload = '''
+    end
+    local function score_joker_effects()
+'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "before"
+match_indent = false
+pattern = "-- context.final_scoring_step calculations"
+payload = '''
+    end
+    local function score_final_scoring_step()
+'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "before"
+match_indent = false
+pattern = "-- TARGET: effects before deck final_scoring_step"
+payload = '''
+    end
+    local function score_final_scoring_step_for_deck_back()
+'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "before"
+match_indent = false
+pattern = "local cards_destroyed = {}"
+payload = '''
+    end
+    local function score_destroying_cards()
+'''
+
+#[[patches]]
+#[patches.pattern]
+#target = "functions/state_events.lua"
+#position = "before"
+#match_indent = false
+#pattern = "-- context.remove_playing_cards calculations"
+#payload = '''
+#    end
+#    local function score_remove_playing_cards()
+#'''
+
+# (compatability with chloe's collection)
+#[[patches]]
+#[patches.pattern]
+#target = "functions/state_events.lua"
+#position = "before"
+#match_indent = false
+#pattern = "if G.GAME.blind.modify_hand_final then"
+#payload = '''
+#    end
+#    local function score_blind_mod_final()
+#'''
+
+#[[patches]]
+#[patches.pattern]
+#target = "functions/state_events.lua"
+#position = "before"
+#match_indent = false
+#pattern = "local glass_shattered = {}"
+#payload = '''
+#    end
+#    local function score_blind_mod_final()
+#'''
+
+[[patches]]
+[patches.regex]
+target = "functions/state_events.lua"
+position = "before"
+match_indent = false
+pattern = '''
+\s*else
+\s*mult = mod_mult\(0\)
+|
+\s*return text, disp_text, poker_hands, scoring_hand, non_loc_disp_text, percent, percent_delta
+\s*end
+\s*function evaluate_play_debuff\(text, disp_text, poker_hands, scoring_hand, non_loc_disp_text, percent, percent_delta\)
+'''
+payload = '''
+
+    end
+    local scoring_step_order = {
+        set_score_from_hand,
+        score_first_used_hand_level,
+        score_before_context,
+        set_score_from_hand_if_modified,
+        score_blind_mod,
+        score_main_card_scoring,
+        score_joker_effects,
+        score_final_scoring_step,
+        score_final_scoring_step_for_deck_back,
+        score_destroying_cards,
+    }
+    -- target for scoring order modifications <NO MARK>
+    local cards_need_unreversed = false
+    if next(find_joker('j_toum_antitime')) then
+        local reversed_scoring_step_order = {
+            set_score_from_hand,
+            set_score_from_hand_if_modified,
+        }
+        for i = #scoring_step_order, 1, -1 do
+            if scoring_step_order[i] ~= set_score_from_hand and scoring_step_order[i] ~= set_score_from_hand_if_modified and scoring_step_order[i] ~= score_destroying_cards then
+                table.insert(reversed_scoring_step_order, scoring_step_order[i])
+            end
+        end
+        table.insert(reversed_scoring_step_order, score_destroying_cards)
+        scoring_step_order = reversed_scoring_step_order
+        for _, area in ipairs(SMODS.get_card_areas('playing_cards')) do
+            SMODS.Mods['Airtokers'].reverse_table(area.cards)
+        end
+        for _, area in ipairs(SMODS.get_card_areas('jokers')) do
+            SMODS.Mods['Airtokers'].reverse_table(area.cards)
+        end
+        SMODS.Mods['Airtokers'].reverse_table(scoring_hand)
+        cards_need_unreversed = true
+    end
+    for i, step in ipairs(scoring_step_order) do
+        step()
+    end
+    if cards_need_unreversed then
+        for _, area in ipairs(SMODS.get_card_areas('playing_cards')) do
+            SMODS.Mods['Airtokers'].reverse_table(area.cards)
+        end
+        for _, area in ipairs(SMODS.get_card_areas('jokers')) do
+            SMODS.Mods['Airtokers'].reverse_table(area.cards)
+        end
+        SMODS.Mods['Airtokers'].reverse_table(scoring_hand)
+    end
+'''

@@ -13,6 +13,16 @@ mark = '\t\t -- Airtokers! // >⏝o )\\t'
 mark = '\t\t -- Airtokers! // >⏝o )\\u005C'   # for " 
 mark2 = '\t\t -- Airtokers! // >⏝o )\\'       # for '''
 
+def mark_spaced(line: str, variant):
+    if '<NO MARK>' in line:
+        return ''
+    pad_size = 20
+    padding = ' ' * (-len(line) + (-((-len(line)) // pad_size) * pad_size))
+    if variant == 'Variant A':
+        return padding + mark
+    else:
+        return padding + mark2
+
 only_remove_marks = False
 
 if len(sys.argv) >= 2:
@@ -47,17 +57,17 @@ for dirpath, dirnames, filenames in os.walk('.\\lovely'):
                             def replacement(m):
                                 global end_of_payload
                                 end_of_payload = True
-                                return f'{m[1]}{mark2}{m[2]}'
+                                return f'{m[1]}{mark_spaced(m[1], 'Variant B')}{m[2]}'
                             if re.match(".*'''[\\s]*$", line):
                                 line = re.sub("^([\\s]*[\\S].*[\\s]*)('''[\\s]*)$", replacement, line)
                                 in_payload = False
                             else:
-                                line = line + mark2
+                                line = line + mark_spaced(line, 'Variant B')
                         else:
                             def replacement(m):
                                 global single_line_payload
                                 single_line_payload = True
-                                return f'{m[1]}{mark}{m[2]}'
+                                return f'{m[1]}{mark_spaced(m[1], 'Variant A')}{m[2]}'
                             line = re.sub("^(payload = \".+)(\"[\\s]*)$", replacement, line)
                     try:
                         print(f'{single_line_payload:<2}{start_of_payload:<2}{in_payload:<2}{end_of_payload:<5}' + line)

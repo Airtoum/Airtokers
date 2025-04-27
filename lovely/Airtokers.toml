@@ -1,7 +1,7 @@
 [manifest]
 version = "1.0.0"
 dump_lua = true
-priority = 0
+priority = 1
 
 [[patches]]
 [patches.pattern]
@@ -9,19 +9,19 @@ target = "functions/state_events.lua"
 position = "after"
 match_indent = false
 pattern = "-- TARGET: adding to hand effects"
-payload = '''local tomorrow_jokers = find_joker('j_toum_tomorrow_joker')		 -- Airtokers! // >⏝o )\
-if next(tomorrow_jokers) then		 -- Airtokers! // >⏝o )\
-    local num_topdeck_scoring_cards = 0		 -- Airtokers! // >⏝o )\
-    for i, v in ipairs(tomorrow_jokers) do		 -- Airtokers! // >⏝o )\
+payload = '''local tomorrow_jokers = find_joker('j_toum_tomorrow_joker')        		 -- Airtokers! // >⏝o )\
+if next(tomorrow_jokers) then           		 -- Airtokers! // >⏝o )\
+    local num_topdeck_scoring_cards = 0 		 -- Airtokers! // >⏝o )\
+    for i, v in ipairs(tomorrow_jokers) do                  		 -- Airtokers! // >⏝o )\
         num_topdeck_scoring_cards = num_topdeck_scoring_cards + v.ability.extra.topdeck_cards_scored		 -- Airtokers! // >⏝o )\
-    end		 -- Airtokers! // >⏝o )\
+    end             		 -- Airtokers! // >⏝o )\
     for i=1,num_topdeck_scoring_cards do		 -- Airtokers! // >⏝o )\
-        local topdeck_card = G.deck and G.deck.cards[#G.deck.cards - i + 1] or nil		 -- Airtokers! // >⏝o )\
-        if topdeck_card then		 -- Airtokers! // >⏝o )\
-            table.insert(final_scoring_hand, topdeck_card)		 -- Airtokers! // >⏝o )\
-        end		 -- Airtokers! // >⏝o )\
-    end		 -- Airtokers! // >⏝o )\
-end		 -- Airtokers! // >⏝o )\
+        local topdeck_card = G.deck and G.deck.cards[#G.deck.cards - i + 1] or nil                  		 -- Airtokers! // >⏝o )\
+        if topdeck_card then            		 -- Airtokers! // >⏝o )\
+            table.insert(final_scoring_hand, topdeck_card)  		 -- Airtokers! // >⏝o )\
+        end         		 -- Airtokers! // >⏝o )\
+    end             		 -- Airtokers! // >⏝o )\
+end                 		 -- Airtokers! // >⏝o )\
 '''
 
 ## Setup scoring animations for cards in deck
@@ -31,9 +31,9 @@ target = "functions/common_events.lua"
 position = "before"
 match_indent = false
 pattern = "elseif card.area == G.hand then"
-payload = '''elseif card.area == G.deck then		 -- Airtokers! // >⏝o )\
-        y_off = -0.15*G.CARD_H		 -- Airtokers! // >⏝o )\
-        card_aligned = 'tm'		 -- Airtokers! // >⏝o )\
+payload = '''elseif card.area == G.deck then                		 -- Airtokers! // >⏝o )\
+        y_off = -0.15*G.CARD_H          		 -- Airtokers! // >⏝o )\
+        card_aligned = 'tm'             		 -- Airtokers! // >⏝o )\
 '''
 
 [[patches]]
@@ -42,9 +42,9 @@ target = "functions/common_events.lua"
 position = "before"
 match_indent = false
 pattern = "elseif card.area == G.hand or card.area == G.deck then"
-payload = '''elseif card.area == G.deck then		 -- Airtokers! // >⏝o )\
-        y_off = -0.15*G.CARD_H		 -- Airtokers! // >⏝o )\
-        card_aligned = 'tm'		 -- Airtokers! // >⏝o )\
+payload = '''elseif card.area == G.deck then                		 -- Airtokers! // >⏝o )\
+        y_off = -0.15*G.CARD_H          		 -- Airtokers! // >⏝o )\
+        card_aligned = 'tm'             		 -- Airtokers! // >⏝o )\
 '''
 
 ## SMODS bettercalc fix to get tomorrow joker to work
@@ -54,7 +54,24 @@ target = "functions/state_events.lua"
 position = "at"
 match_indent = false
 pattern = "SMODS.calculate_main_scoring({cardarea = v, full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands}, v == G.play and scoring_hand or nil)"
-payload = "SMODS.calculate_main_scoring({cardarea = v, full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands}, scoring_hand or nil)		 -- Airtokers! // >⏝o )\u005C"
+payload = "SMODS.calculate_main_scoring({cardarea = v, full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands}, v ~= G.hand and scoring_hand or nil)     		 -- Airtokers! // >⏝o )\u005C"
+
+# SMODS tweak so unscored cards in deck aren't treated as treated as unscored in played hand
+[[patches]]
+[patches.pattern]
+target = '''=[SMODS _ "src/utils.lua"]'''
+position = "before"
+match_indent = false
+pattern = "if in_scoring then context.cardarea = G.play else context.cardarea = 'unscored' end"
+payload = "local true_cardarea = context.cardarea           		 -- Airtokers! // >⏝o )\u005C"
+
+[[patches]]
+[patches.pattern]
+target = '''=[SMODS _ "src/utils.lua"]'''
+position = "after"
+match_indent = false
+pattern = "if in_scoring then context.cardarea = G.play else context.cardarea = 'unscored' end"
+payload = "if true_cardarea == G.deck and not in_scoring then context.cardarea = 'undrawn' end      		 -- Airtokers! // >⏝o )\u005C"
 
 ## 
 ##[[patches]]
@@ -82,7 +99,7 @@ target = "functions/common_events.lua"
 position = "before"
 match_indent = false
 pattern = "for k, v in ipairs(badges) do"
-payload = '''if ((_c.set == 'Default' or _c.set == 'Enhanced') and next(find_joker('j_toum_census'))) then info_queue[#info_queue+1] = {key = 'toum_times_played_tip', set = 'Other', vars = {specific_vars.times_played}} end		 -- Airtokers! // >⏝o )\
+payload = '''if ((_c.set == 'Default' or _c.set == 'Enhanced') and next(find_joker('j_toum_census'))) then info_queue[#info_queue+1] = {key = 'toum_times_played_tip', set = 'Other', vars = {specific_vars.times_played}} end                  		 -- Airtokers! // >⏝o )\
 '''
 
 ## Pass in times played into special vars for correct badge creation   
@@ -93,7 +110,7 @@ position = "before"
 match_indent = false
 pattern = "return generate_card_ui\\(self.config.center, nil, loc_vars, card_type, badges, hide_desc, main_start, main_end.*\\)"
 payload = '''
-loc_vars = loc_vars or {}; loc_vars.times_played = self.base.times_played		 -- Airtokers! // >⏝o )\
+loc_vars = loc_vars or {}; loc_vars.times_played = self.base.times_played       		 -- Airtokers! // >⏝o )\
 '''
 
 ## Copy times played into cards made for deck preview
@@ -105,9 +122,9 @@ position = "after"
 match_indent = false
 pattern = "copy.T.y = view_deck.T.y"
 payload = '''
-          print(SUITS[suit_map[j]][i].base.times_played)		 -- Airtokers! // >⏝o )\
-          copy.debuff = true		 -- Airtokers! // >⏝o )\
-          copy.base.times_played = SUITS[suit_map[j]][i].base.times_played		 -- Airtokers! // >⏝o )\'''
+          print(SUITS[suit_map[j]][i].base.times_played)    		 -- Airtokers! // >⏝o )\
+          copy.debuff = true            		 -- Airtokers! // >⏝o )\
+          copy.base.times_played = SUITS[suit_map[j]][i].base.times_played      		 -- Airtokers! // >⏝o )\'''
 
 ## Copy times played into cards made for deck preview
 ## Why card_scale? Because card_scale is only used for setting up the deck preview. See above
@@ -118,9 +135,18 @@ position = "after"
 match_indent = false
 pattern = "new_card.pinned = other.pinned"
 payload = '''
-    if card_scale then		 -- Airtokers! // >⏝o )\
+    if card_scale then                  		 -- Airtokers! // >⏝o )\
         new_card.base.times_played = other.base.times_played		 -- Airtokers! // >⏝o )\
-    end		 -- Airtokers! // >⏝o )\'''
+    end             		 -- Airtokers! // >⏝o )\'''
+
+# do not reset times_played when base is set
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+position = "at"
+match_indent = false
+pattern = "times_played = 0"
+payload = "times_played = self.base and self.base.times_played or 0             		 -- Airtokers! // >⏝o )\u005C"
 
 ## Setup my custom effects, for individual card
 [[patches]]
@@ -130,7 +156,7 @@ position = "before"
 match_indent = false
 pattern = "--calculate the card edition effects"
 payload = '''
-SMODS.Mods['Airtokers'].check_custom_effects(effects[ii], scoring_hand[i], percent)		 -- Airtokers! // >⏝o )\
+SMODS.Mods['Airtokers'].check_custom_effects(effects[ii], scoring_hand[i], percent)                 		 -- Airtokers! // >⏝o )\
 '''
 
 ## Setup my custom effects, for cards held in hand
@@ -141,7 +167,7 @@ position = "before"
 match_indent = false
 pattern = "if effects[ii].message then"
 payload = '''
-mod_percent = SMODS.Mods['Airtokers'].check_custom_effects(effects[ii], G.hand.cards[i], percent, mod_percent) and mod_percent		 -- Airtokers! // >⏝o )\
+mod_percent = SMODS.Mods['Airtokers'].check_custom_effects(effects[ii], G.hand.cards[i], percent, mod_percent) and mod_percent              		 -- Airtokers! // >⏝o )\
 '''
 
 ## Setup my custom effects' little UI squares
@@ -152,15 +178,15 @@ position = "before"
 match_indent = false
 pattern = "elseif eval_type == 'swap' then "
 payload = '''
-elseif SMODS.Mods['Airtokers'].does_match_any_custom_effect_for_card_eval_status_text(card, eval_type, amt, percent, dir, extra) then		 -- Airtokers! // >⏝o )\
-    local returned_from_airtokers = SMODS.Mods['Airtokers'].apply_custom_effects_to_card_eval_status_text(card, eval_type, amt, percent, dir, extra)		 -- Airtokers! // >⏝o )\
-    sound = returned_from_airtokers.sound or 'multhit2'		 -- Airtokers! // >⏝o )\
-    volume = returned_from_airtokers.volume or 0.7		 -- Airtokers! // >⏝o )\
-    amt = returned_from_airtokers.amt or amt or 1		 -- Airtokers! // >⏝o )\
-    text = returned_from_airtokers.text or localize{type='variable',key='a_xmult',vars={amt}}		 -- Airtokers! // >⏝o )\
-    colour = returned_from_airtokers.colour or G.C.XMULT		 -- Airtokers! // >⏝o )\
-    config.type = returned_from_airtokers['config.type'] or 'fade'		 -- Airtokers! // >⏝o )\
-    config.scale = returned_from_airtokers['config.scale'] or 0.7		 -- Airtokers! // >⏝o )\
+elseif SMODS.Mods['Airtokers'].does_match_any_custom_effect_for_card_eval_status_text(card, eval_type, amt, percent, dir, extra) then       		 -- Airtokers! // >⏝o )\
+    local returned_from_airtokers = SMODS.Mods['Airtokers'].apply_custom_effects_to_card_eval_status_text(card, eval_type, amt, percent, dir, extra)            		 -- Airtokers! // >⏝o )\
+    sound = returned_from_airtokers.sound or 'multhit2'     		 -- Airtokers! // >⏝o )\
+    volume = returned_from_airtokers.volume or 0.7          		 -- Airtokers! // >⏝o )\
+    amt = returned_from_airtokers.amt or amt or 1           		 -- Airtokers! // >⏝o )\
+    text = returned_from_airtokers.text or localize{type='variable',key='a_xmult',vars={amt}}       		 -- Airtokers! // >⏝o )\
+    colour = returned_from_airtokers.colour or G.C.XMULT    		 -- Airtokers! // >⏝o )\
+    config.type = returned_from_airtokers['config.type'] or 'fade'              		 -- Airtokers! // >⏝o )\
+    config.scale = returned_from_airtokers['config.scale'] or 0.7               		 -- Airtokers! // >⏝o )\
 '''
 
 ## Setup my custom effects, for cards joker effects
@@ -171,7 +197,7 @@ position = "before"
 match_indent = false
 pattern = "if effects.jokers.Xmult_mod then mult = mod_mult(mult*effects.jokers.Xmult_mod);extras.mult = true  end"
 payload = '''
-SMODS.Mods['Airtokers'].joker_check_custom_effects(effects.jokers, extras)		 -- Airtokers! // >⏝o )\
+SMODS.Mods['Airtokers'].joker_check_custom_effects(effects.jokers, extras)      		 -- Airtokers! // >⏝o )\
 '''
 
 ## Setup my custom effects, for cards joker on joker effects
@@ -182,7 +208,7 @@ position = "before"
 match_indent = false
 pattern = "if effect.Xmult_mod then mult = mod_mult(mult*effect.Xmult_mod);extras.mult = true  end"
 payload = '''
-SMODS.Mods['Airtokers'].joker_check_custom_effects(effect, extras)		 -- Airtokers! // >⏝o )\
+SMODS.Mods['Airtokers'].joker_check_custom_effects(effect, extras)              		 -- Airtokers! // >⏝o )\
 '''
 
 ## Create control character y for setting vertical offest
@@ -201,7 +227,7 @@ target = "functions/misc_functions.lua"
 position = "after"
 match_indent = false
 pattern = "spacing = _spacing,"
-payload = "y_offset = (part.control.y and tonumber(part.control.y) or 0),		 -- Airtokers! // >⏝o )\u005C"
+payload = "y_offset = (part.control.y and tonumber(part.control.y) or 0),       		 -- Airtokers! // >⏝o )\u005C"
 
 ## Create control character y for setting vertical offest
 [[patches]]
@@ -210,7 +236,7 @@ target = "functions/misc_functions.lua"
 position = "after"
 match_indent = false
 pattern = "shadow = args.shadow,"
-payload = "y_offset = (part.control.y and tonumber(part.control.y) or 0),		 -- Airtokers! // >⏝o )\u005C"
+payload = "y_offset = (part.control.y and tonumber(part.control.y) or 0),       		 -- Airtokers! // >⏝o )\u005C"
 
 ## Use localization construction for attention text
 #[[patches]]
@@ -229,8 +255,8 @@ target = "functions/misc_functions.lua"
 position = "before"
 match_indent = false
 pattern = "elseif args.type == 'variable' then"
-payload = '''elseif args.type == 'variable_attention_text' then		 -- Airtokers! // >⏝o )\
-    loc_target = G.localization.misc.v_dictionary_parsed[args.key]		 -- Airtokers! // >⏝o )\'''
+payload = '''elseif args.type == 'variable_attention_text' then                 		 -- Airtokers! // >⏝o )\
+    loc_target = G.localization.misc.v_dictionary_parsed[args.key]              		 -- Airtokers! // >⏝o )\'''
 
 ## Permit use of localize function for Attention Text
 [[patches]]
@@ -239,7 +265,7 @@ target = "functions/misc_functions.lua"
 position = "at"
 match_indent = false
 pattern = "for _, lines in ipairs(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or (args.type == 'text' or args.type == 'tutorial' or args.type == 'quips') and loc_target or loc_target.text_parsed) do"
-payload = "for _, lines in ipairs(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or (args.type == 'text' or args.type == 'tutorial' or args.type == 'quips') and loc_target or (args.type == 'variable_attention_text' and {loc_target}) or loc_target.text_parsed) do		 -- Airtokers! // >⏝o )\u005C"
+payload = "for _, lines in ipairs(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or (args.type == 'text' or args.type == 'tutorial' or args.type == 'quips') and loc_target or (args.type == 'variable_attention_text' and {loc_target}) or loc_target.text_parsed) do   		 -- Airtokers! // >⏝o )\u005C"
 
 ## Permit use of localize function for Attention Text
 [[patches]]
@@ -248,18 +274,18 @@ target = "functions/misc_functions.lua"
 position = "before"
 match_indent = false
 pattern = "elseif part.control.E then"
-payload = '''elseif args.type == 'variable_attention_text' then -- inject start		 -- Airtokers! // >⏝o )\
-          final_line[#final_line+1] = {n=G.UIT.O, config={		 -- Airtokers! // >⏝o )\
+payload = '''elseif args.type == 'variable_attention_text' then -- inject start 		 -- Airtokers! // >⏝o )\
+          final_line[#final_line+1] = {n=G.UIT.O, config={  		 -- Airtokers! // >⏝o )\
             object = DynaText({string = {assembled_string}, colours = {part.control.V and args.vars.colours[tonumber(part.control.V)] or (part.control.C and loc_colour(part.control.C)) or args.colour or loc_colour(nil)},		 -- Airtokers! // >⏝o )\
-            silent = true,		 -- Airtokers! // >⏝o )\
-            float = true,		 -- Airtokers! // >⏝o )\
-            shadow = true,		 -- Airtokers! // >⏝o )\
-            pop_in = 0,		 -- Airtokers! // >⏝o )\
-            pop_in_rate = 6,		 -- Airtokers! // >⏝o )\
-            maxw = args.maxw,		 -- Airtokers! // >⏝o )\
-            y_offset = (part.control.y and tonumber(part.control.y) or 0),		 -- Airtokers! // >⏝o )\
-            scale = (args.scale or 1)*(part.control.s and tonumber(part.control.s) or 1)})		 -- Airtokers! // >⏝o )\
-          }} -- inject end		 -- Airtokers! // >⏝o )\'''
+            silent = true,              		 -- Airtokers! // >⏝o )\
+            float = true,               		 -- Airtokers! // >⏝o )\
+            shadow = true,              		 -- Airtokers! // >⏝o )\
+            pop_in = 0,                 		 -- Airtokers! // >⏝o )\
+            pop_in_rate = 6,            		 -- Airtokers! // >⏝o )\
+            maxw = args.maxw,           		 -- Airtokers! // >⏝o )\
+            y_offset = (part.control.y and tonumber(part.control.y) or 0),      		 -- Airtokers! // >⏝o )\
+            scale = (args.scale or 1)*(part.control.s and tonumber(part.control.s) or 1)})          		 -- Airtokers! // >⏝o )\
+          }} -- inject end              		 -- Airtokers! // >⏝o )\'''
 
 ## Lets you pass in a function as the text to do just-in-time localization node tree construction for Attention Text
 [[patches]]
@@ -268,7 +294,7 @@ target = "functions/UI_definitions.lua"
 position = "before"
 match_indent = false
 pattern = "{n=G.UIT.ROOT, config = {align = args.cover_align or 'cm', minw = (args.cover and args.cover.T.w or 0.001) + (args.cover_padding or 0), minh = (args.cover and args.cover.T.h or 0.001) + (args.cover_padding or 0), padding = 0.03, r = 0.1, emboss = args.emboss, colour = args.cover_colour}, nodes={"
-payload = '''type(args.text) == 'function' and (function(root_node) args.text(root_node, args); root_node.nodes = root_node.nodes[1]; return root_node end)({n=G.UIT.ROOT, config = {align = args.cover_align or 'cm', minw = (args.cover and args.cover.T.w or 0.001) + (args.cover_padding or 0), minh = (args.cover and args.cover.T.h or 0.001) + (args.cover_padding or 0), padding = 0.03, r = 0.1, emboss = args.emboss, colour = args.cover_colour}, nodes={}}) or		 -- Airtokers! // >⏝o )\'''
+payload = '''type(args.text) == 'function' and (function(root_node) args.text(root_node, args); root_node.nodes = root_node.nodes[1]; return root_node end)({n=G.UIT.ROOT, config = {align = args.cover_align or 'cm', minw = (args.cover and args.cover.T.w or 0.001) + (args.cover_padding or 0), minh = (args.cover and args.cover.T.h or 0.001) + (args.cover_padding or 0), padding = 0.03, r = 0.1, emboss = args.emboss, colour = args.cover_colour}, nodes={}}) or  		 -- Airtokers! // >⏝o )\'''
 
 ## Does Attention Text animations for each DynaText instead of just the first one
 [[patches]]
@@ -278,14 +304,14 @@ position = "after"
 match_indent = false
 pattern = "args.text:pulse(0.5)"
 payload = '''
-local extra_dynatext_children = nil		 -- Airtokers! // >⏝o )\
-if #args.AT.UIRoot.children >= 2 then		 -- Airtokers! // >⏝o )\
-    extra_dynatext_children = {}		 -- Airtokers! // >⏝o )\
-    for i = 2, #args.AT.UIRoot.children do		 -- Airtokers! // >⏝o )\
-        args.AT.UIRoot.children[i].config.object:pulse(0.5)		 -- Airtokers! // >⏝o )\
-        table.insert(extra_dynatext_children, args.AT.UIRoot.children[i].config.object)		 -- Airtokers! // >⏝o )\
-    end		 -- Airtokers! // >⏝o )\
-end		 -- Airtokers! // >⏝o )\
+local extra_dynatext_children = nil     		 -- Airtokers! // >⏝o )\
+if #args.AT.UIRoot.children >= 2 then   		 -- Airtokers! // >⏝o )\
+    extra_dynatext_children = {}        		 -- Airtokers! // >⏝o )\
+    for i = 2, #args.AT.UIRoot.children do                  		 -- Airtokers! // >⏝o )\
+        args.AT.UIRoot.children[i].config.object:pulse(0.5) 		 -- Airtokers! // >⏝o )\
+        table.insert(extra_dynatext_children, args.AT.UIRoot.children[i].config.object)             		 -- Airtokers! // >⏝o )\
+    end             		 -- Airtokers! // >⏝o )\
+end                 		 -- Airtokers! // >⏝o )\
 '''
 
 ## Does Attention Text animations for each DynaText instead of just the first one
@@ -296,11 +322,11 @@ position = "after"
 match_indent = false
 pattern = "args.text:pop_out(3)"
 payload = '''
-if extra_dynatext_children then		 -- Airtokers! // >⏝o )\
-    for _, extra_dynatext in ipairs(extra_dynatext_children) do		 -- Airtokers! // >⏝o )\
-        extra_dynatext:pop_out(3)		 -- Airtokers! // >⏝o )\
-    end		 -- Airtokers! // >⏝o )\
-end		 -- Airtokers! // >⏝o )\
+if extra_dynatext_children then         		 -- Airtokers! // >⏝o )\
+    for _, extra_dynatext in ipairs(extra_dynatext_children) do                 		 -- Airtokers! // >⏝o )\
+        extra_dynatext:pop_out(3)       		 -- Airtokers! // >⏝o )\
+    end             		 -- Airtokers! // >⏝o )\
+end                 		 -- Airtokers! // >⏝o )\
 '''
 
 ## Make Attention Text for misc-effect effects (that don't do mult or chips)
@@ -310,7 +336,7 @@ target = "functions/state_events.lua"
 position = "before"
 match_indent = false
 pattern = "if extras.mult or extras.hand_chips then card_eval_status_text(v, 'jokers', nil, percent, nil, effect) end"
-payload = "if extras.misc then extras.mult = true end		 -- Airtokers! // >⏝o )\u005C"
+payload = "if extras.misc then extras.mult = true end       		 -- Airtokers! // >⏝o )\u005C"
 
 ## Make Mr. Bones work outside of rounds (both are 0)
 [[patches]]
@@ -319,7 +345,7 @@ target = "card.lua"
 position = "at"
 match_indent = false
 pattern = "G.GAME.chips/G.GAME.blind.chips >= 0.25 then"
-payload = "(G.GAME.chips/G.GAME.blind.chips >= 0.25 or G.GAME.chips == G.GAME.blind.chips) then		 -- Airtokers! // >⏝o )\u005C"
+payload = "(G.GAME.chips/G.GAME.blind.chips >= 0.25 or G.GAME.chips == G.GAME.blind.chips) then     		 -- Airtokers! // >⏝o )\u005C"
 
 ## Allow cardareas to not set rotation of a joker
 [[patches]]
@@ -328,7 +354,7 @@ target = "cardarea.lua"
 position = "before"
 match_indent = false
 pattern = "card.T.r = 0.1*(-#self.cards/2 - 0.5 + k)/(#self.cards)+ (G.SETTINGS.reduced_motion and 0 or 1)*0.02*math.sin(2*G.TIMERS.REAL+card.T.x)"
-payload = "if not card.do_not_align_rotation then		 -- Airtokers! // >⏝o )\u005C"
+payload = "if not card.do_not_align_rotation then           		 -- Airtokers! // >⏝o )\u005C"
 
 [[patches]]
 [patches.pattern]
@@ -336,7 +362,7 @@ target = "cardarea.lua"
 position = "after"
 match_indent = false
 pattern = "card.T.r = 0.1*(-#self.cards/2 - 0.5 + k)/(#self.cards)+ (G.SETTINGS.reduced_motion and 0 or 1)*0.02*math.sin(2*G.TIMERS.REAL+card.T.x)"
-payload = "end		 -- Airtokers! // >⏝o )\u005C"
+payload = "end      		 -- Airtokers! // >⏝o )\u005C"
 
 [[patches]]
 [patches.pattern]
@@ -346,9 +372,9 @@ match_indent = false
 pattern = '''for k, card in ipairs(self.cards) do
         card.rank = k
     end'''
-payload = '''for k, card in ipairs(self.cards) do		 -- Airtokers! // >⏝o )\
-        if card.angle then card.T.r = card.angle end		 -- Airtokers! // >⏝o )\
-    end		 -- Airtokers! // >⏝o )\'''
+payload = '''for k, card in ipairs(self.cards) do           		 -- Airtokers! // >⏝o )\
+        if card.angle then card.T.r = card.angle end        		 -- Airtokers! // >⏝o )\
+    end             		 -- Airtokers! // >⏝o )\'''
 
 # Make DynaText with a table possible for loc_vars
 [[patches]]
@@ -358,10 +384,10 @@ position = "before"
 match_indent = false
 pattern = "local desc_scale = G.LANG.font.DESCSCALE"
 payload = '''
--- pass to vars table with 'ref_table' and 'ref_value' keys. referenced by index in vars		 -- Airtokers! // >⏝o )\
-if part.control.D then 		 -- Airtokers! // >⏝o )\
-    assembled_string = args.vars[tonumber(part.control.D)]		 -- Airtokers! // >⏝o )\
-end		 -- Airtokers! // >⏝o )\
+-- pass to vars table with 'ref_table' and 'ref_value' keys. referenced by index in vars            		 -- Airtokers! // >⏝o )\
+if part.control.D then                  		 -- Airtokers! // >⏝o )\
+    assembled_string = args.vars[tonumber(part.control.D)]  		 -- Airtokers! // >⏝o )\
+end                 		 -- Airtokers! // >⏝o )\
 '''
 
 # Conditional lines for localization function
@@ -371,7 +397,7 @@ target = "functions/misc_functions.lua"
 position = "after"
 match_indent = false
 pattern = "local final_line = {}"
-payload = "local skip_this_line = false		 -- Airtokers! // >⏝o )\u005C"
+payload = "local skip_this_line = false 		 -- Airtokers! // >⏝o )\u005C"
 
 # Make DynaText with a table possible for loc_vars
 [[patches]]
@@ -381,15 +407,15 @@ position = "before"
 match_indent = false
 pattern = "local desc_scale = G.LANG.font.DESCSCALE"
 payload = '''
--- pass to vars table with a boolean to skip adding this line. referenced by index in vars		 -- Airtokers! // >⏝o )\
-if part.control.O then  -- O for "Omit if"		 -- Airtokers! // >⏝o )\
-    skip_this_line = skip_this_line or args.vars[tonumber(part.control.O)]		 -- Airtokers! // >⏝o )\
-end		 -- Airtokers! // >⏝o )\
-local skip_this_element = false		 -- Airtokers! // >⏝o )\
--- pass to vars table with a boolean to skip adding this element. referenced by index in vars		 -- Airtokers! // >⏝o )\
-if part.control.o and args.vars[tonumber(part.control.o)] then  -- o for "omit if"		 -- Airtokers! // >⏝o )\
-    skip_this_element = true		 -- Airtokers! // >⏝o )\
-end		 -- Airtokers! // >⏝o )\
+-- pass to vars table with a boolean to skip adding this line. referenced by index in vars          		 -- Airtokers! // >⏝o )\
+if part.control.O then  -- O for "Omit if"                  		 -- Airtokers! // >⏝o )\
+    skip_this_line = skip_this_line or args.vars[tonumber(part.control.O)]      		 -- Airtokers! // >⏝o )\
+end                 		 -- Airtokers! // >⏝o )\
+local skip_this_element = false         		 -- Airtokers! // >⏝o )\
+-- pass to vars table with a boolean to skip adding this element. referenced by index in vars       		 -- Airtokers! // >⏝o )\
+if part.control.o and args.vars[tonumber(part.control.o)] then  -- o for "omit if"                  		 -- Airtokers! // >⏝o )\
+    skip_this_element = true            		 -- Airtokers! // >⏝o )\
+end                 		 -- Airtokers! // >⏝o )\
 '''
 
 [[patches]]
@@ -406,7 +432,7 @@ target = "functions/misc_functions.lua"
 position = "before"
 match_indent = false
 pattern = "if args.type == 'name' or args.type == 'text' then return final_line end"
-payload = "end -- i hope this doesn't fuck anything up!		 -- Airtokers! // >⏝o )\u005C"
+payload = "end -- i hope this doesn't fuck anything up!     		 -- Airtokers! // >⏝o )\u005C"
 
 [[patches]]
 [patches.pattern]
@@ -414,9 +440,9 @@ target = "functions/misc_functions.lua"
 position = "at"
 match_indent = false
 pattern = "args.nodes[#args.nodes+1] = final_line"
-payload = '''if not skip_this_line then		 -- Airtokers! // >⏝o )\
-    args.nodes[#args.nodes+1] = final_line		 -- Airtokers! // >⏝o )\
-end		 -- Airtokers! // >⏝o )\'''
+payload = '''if not skip_this_line then 		 -- Airtokers! // >⏝o )\
+    args.nodes[#args.nodes+1] = final_line                  		 -- Airtokers! // >⏝o )\
+end                 		 -- Airtokers! // >⏝o )\'''
 
 # uncompressed save for testing
 [[patches]]
@@ -425,7 +451,7 @@ target = "engine/string_packer.lua"
 position = "after"
 match_indent = false
 pattern = "local save_string = type(_data) == 'table' and STR_PACK(_data) or _data"
-payload = "love.filesystem.write(_file..'.txt',save_string)		 -- Airtokers! // >⏝o )\u005C"
+payload = "love.filesystem.write(_file..'.txt',save_string) 		 -- Airtokers! // >⏝o )\u005C"
 
 # Big in card_eval_status_text
 [[patches]]
@@ -434,7 +460,7 @@ target = "functions/common_events.lua"
 position = "at"
 match_indent = false
 pattern = "if amt > 0 or amt < 0 then"
-payload = "if SMODS.Mods['Airtokers'].number_greater_than(SMODS.Mods['Airtokers'].number(amt), SMODS.Mods['Airtokers'].number(0)) or SMODS.Mods['Airtokers'].number_less_than(SMODS.Mods['Airtokers'].number(amt), SMODS.Mods['Airtokers'].number(0)) then  -- Talisman BigNum/OmegaNum for Joker return values		 -- Airtokers! // >⏝o )\u005C"
+payload = "if SMODS.Mods['Airtokers'].number_greater_than(SMODS.Mods['Airtokers'].number(amt), SMODS.Mods['Airtokers'].number(0)) or SMODS.Mods['Airtokers'].number_less_than(SMODS.Mods['Airtokers'].number(amt), SMODS.Mods['Airtokers'].number(0)) then  -- Talisman BigNum/OmegaNum for Joker return values                 		 -- Airtokers! // >⏝o )\u005C"
 
 # attempt to fix omeganum (this did not work)
 [[patches]]
@@ -444,10 +470,10 @@ position = "after"
 match_indent = false
 pattern = "if O_type == 'table' then"
 payload = '''
-    if getmetatable(O) ~= nil and getmetatable(O) == BigMeta then return Big:new(O) end		 -- Airtokers! // >⏝o )\
-    if getmetatable(O) ~= nil and getmetatable(O) == OmegaMeta then		 -- Airtokers! // >⏝o )\
-        return O:clone() 		 -- Airtokers! // >⏝o )\
-    end		 -- Airtokers! // >⏝o )\
+    if getmetatable(O) ~= nil and getmetatable(O) == BigMeta then return Big:new(O) end             		 -- Airtokers! // >⏝o )\
+    if getmetatable(O) ~= nil and getmetatable(O) == OmegaMeta then             		 -- Airtokers! // >⏝o )\
+        return O:clone()                		 -- Airtokers! // >⏝o )\
+    end             		 -- Airtokers! // >⏝o )\
 '''
 
 # lets you put card eval status text at the front of the event queue
@@ -461,9 +487,9 @@ return true
                     end
             }))'''
 payload = '''
-   return true		 -- Airtokers! // >⏝o )\
-                    end		 -- Airtokers! // >⏝o )\
-            }), nil, extra and extra.front_of_event_queue)		 -- Airtokers! // >⏝o )\'''
+   return true      		 -- Airtokers! // >⏝o )\
+                    end                 		 -- Airtokers! // >⏝o )\
+            }), nil, extra and extra.front_of_event_queue)  		 -- Airtokers! // >⏝o )\'''
 
 # more easing types since quad is backwards
 [[patches]]
@@ -473,18 +499,18 @@ position = "before"
 match_indent = false
 pattern = "if self.ease.type == 'quad' then"
 payload = '''
-    if self.ease.type == 'sqrt' then		 -- Airtokers! // >⏝o )\
-        percent_done = percent_done ^ 0.5;		 -- Airtokers! // >⏝o )\
-        self.ease.ref_table[self.ease.ref_value] = self.func(percent_done*self.ease.start_val + (1-percent_done)*self.ease.end_val)		 -- Airtokers! // >⏝o )\
-    end		 -- Airtokers! // >⏝o )\
-    if self.ease.type == 'quad_reverse' then		 -- Airtokers! // >⏝o )\
-        percent_done = 1 - ((1 - percent_done) ^ 2);		 -- Airtokers! // >⏝o )\
-        self.ease.ref_table[self.ease.ref_value] = self.func(percent_done*self.ease.start_val + (1-percent_done)*self.ease.end_val)		 -- Airtokers! // >⏝o )\
-    end		 -- Airtokers! // >⏝o )\
-    if self.ease.type == 'sqrt_reverse' then		 -- Airtokers! // >⏝o )\
-        percent_done = 1 - ((1 - percent_done) ^ 0.5);		 -- Airtokers! // >⏝o )\
-        self.ease.ref_table[self.ease.ref_value] = self.func(percent_done*self.ease.start_val + (1-percent_done)*self.ease.end_val)		 -- Airtokers! // >⏝o )\
-    end		 -- Airtokers! // >⏝o )\
+    if self.ease.type == 'sqrt' then    		 -- Airtokers! // >⏝o )\
+        percent_done = percent_done ^ 0.5;                  		 -- Airtokers! // >⏝o )\
+        self.ease.ref_table[self.ease.ref_value] = self.func(percent_done*self.ease.start_val + (1-percent_done)*self.ease.end_val)         		 -- Airtokers! // >⏝o )\
+    end             		 -- Airtokers! // >⏝o )\
+    if self.ease.type == 'quad_reverse' then                		 -- Airtokers! // >⏝o )\
+        percent_done = 1 - ((1 - percent_done) ^ 2);        		 -- Airtokers! // >⏝o )\
+        self.ease.ref_table[self.ease.ref_value] = self.func(percent_done*self.ease.start_val + (1-percent_done)*self.ease.end_val)         		 -- Airtokers! // >⏝o )\
+    end             		 -- Airtokers! // >⏝o )\
+    if self.ease.type == 'sqrt_reverse' then                		 -- Airtokers! // >⏝o )\
+        percent_done = 1 - ((1 - percent_done) ^ 0.5);      		 -- Airtokers! // >⏝o )\
+        self.ease.ref_table[self.ease.ref_value] = self.func(percent_done*self.ease.start_val + (1-percent_done)*self.ease.end_val)         		 -- Airtokers! // >⏝o )\
+    end             		 -- Airtokers! // >⏝o )\
 '''
 
 # custom buying requirements
@@ -496,8 +522,8 @@ match_indent = false
 pattern = "G.FUNCS.check_for_buy_space = function(card)"
 payload = '''
     if card.config.center and card.config.center.custom_check_for_buy_space then		 -- Airtokers! // >⏝o )\
-        return card.config.center:custom_check_for_buy_space(card, card.edition and card.edition.negative)		 -- Airtokers! // >⏝o )\
-    end		 -- Airtokers! // >⏝o )\
+        return card.config.center:custom_check_for_buy_space(card, card.edition and card.edition.negative)              		 -- Airtokers! // >⏝o )\
+    end             		 -- Airtokers! // >⏝o )\
 '''
 
 # add useless consumables
@@ -507,7 +533,7 @@ target = "functions/UI_definitions.lua"
 position = "before"
 match_indent = false
 pattern = "use"
-payload = "(not card.ability.useless_consumable and		 -- Airtokers! // >⏝o )\u005C"
+payload = "(not card.ability.useless_consumable and         		 -- Airtokers! // >⏝o )\u005C"
 
 [[patches]]
 [patches.pattern]
@@ -515,4 +541,40 @@ target = "functions/UI_definitions.lua"
 position = "after"
 match_indent = false
 pattern = "use"
-payload = "or nil)		 -- Airtokers! // >⏝o )\u005C"
+payload = "or nil)  		 -- Airtokers! // >⏝o )\u005C"
+
+# add custom run setup for centers
+[[patches]]
+[patches.pattern]
+target = "game.lua"
+position = "after"
+match_indent = false
+pattern = "reset_castle_card()"
+payload = '''
+    for k, v in pairs(G.P_CENTERS) do   		 -- Airtokers! // >⏝o )\
+        if v and v.start_of_run_setup and type(v.start_of_run_setup) == 'function' then             		 -- Airtokers! // >⏝o )\
+            v:start_of_run_setup(v)     		 -- Airtokers! // >⏝o )\
+        end         		 -- Airtokers! // >⏝o )\
+    end             		 -- Airtokers! // >⏝o )\
+'''
+
+# jokers triggered twice
+#[[patches]]
+#[patches.pattern]
+#target = '''=[SMODS _ "src/utils.lua"]'''
+#position = "after"
+#match_indent = false
+#pattern = "-- TARGET: add your own CardAreas for joker evaluation"
+#payload = '''
+#    table.insert(t, G.jokers)
+#'''
+
+#[[patches]]
+#[patches.pattern]
+#target = "functions/button_callbacks.lua"
+#position = "after"
+#match_indent = false
+#pattern = "G.GAME.current_round.current_hand.chip_text = new_chip_text"
+#payload = '''
+#G.GAME.current_round.current_hand.chip_text = '-1'
+#'''
