@@ -53,9 +53,20 @@ local function is_big(x)
 end
 Airtokers.is_big = is_big
 
+local function are_both_big(a, b)
+    return is_big(a) and is_big(b)
+end
+
+local function is_one_big(a, b)
+    return is_big(a) or is_big(b)
+end
+
 local function number_equal(a, b)
-    if is_big(a) then
+    if are_both_big(a,b) then
         return a:eq(b)
+    end
+    if is_one_big(a,b) then
+        return number(a):eq(number(b))
     end
     return a == b
 end
@@ -83,24 +94,33 @@ end
 Airtokers.is_negative = is_negative
 
 local function number_not_equal(a, b)
-    if is_big(a) then
+    if are_both_big(a,b) then
         return not a:eq(b)
+    end
+    if is_one_big(a,b) then
+        return not number(a):eq(number(b))
     end
     return a ~= b
 end
 Airtokers.number_not_equal = number_not_equal
 
 local function number_greater_than(a, b)
-    if is_big(a) then
+    if are_both_big(a,b) then
         return a:gt(b)
+    end
+    if is_one_big(a,b) then
+        return number(a):gt(number(b))
     end
     return a > b
 end
 Airtokers.number_greater_than = number_greater_than
 
 local function number_less_than(a, b)
-    if is_big(a) then
+    if are_both_big(a,b) then
         return a:lt(b)
+    end
+    if is_one_big(a,b) then
+        return number(a):lt(number(b))
     end
     return a < b
 end
@@ -109,20 +129,26 @@ Airtokers.number_less_than = number_less_than
 -- bignum favors the number with the higher exponent, and ranges 0-1 have negative exponents, where 0 has exponent of 0. We must handle 0 specifically
 local function number_greater_than_or_equal(a, b)
     --if number_equal(a, b) then return true end
-    if is_big(a) then
+    if are_both_big(a,b) then
     --    if is_zero(a) then return is_negative(b) end
     --    if is_zero(b) then return is_positive(a) end
         return a:gte(b)
+    end
+    if is_one_big(a,b) then
+        return number(a):gte(number(b))
     end
     return a >= b
 end
 
 local function number_less_than_or_equal(a, b)
     --if number_equal(a, b) then return true end
-    if is_big(a) then
+    if are_both_big(a,b) then
     --    if is_zero(a) then return is_negative(b) end
     --    if is_zero(b) then return is_positive(a) end
         return a:lte(b)
+    end
+    if is_one_big(a,b) then
+        return number(a):gte(number(b))
     end
     return a <= b
 end
@@ -967,14 +993,14 @@ end
 local function exp_mult_disclaimer(amount_raw)
     local amount = number(amount_raw)
     if number_greater_than(amount, number(math.exp(math.exp(-1)))) then
-        return { '(Always increases mult)', '', '', '', '', always=true }
+        return { '(Always increases Mult)', '', '', '', '', always=true }
     elseif number_greater_than(amount, number(1)) then
         local low_intersection = infinite_power_tower(amount)
         local high_intersection = infinite_log_dungeon(amount)
-        return { '(Will decrease mult if between ', low_intersection, ' and ', high_intersection, ')' }
+        return { '(Will decrease Mult if between ', low_intersection, ' and ', high_intersection, ')' }
     elseif number_greater_than_or_equal(amount, number(0)) then -- greater than OR EQUAL may have been causing the problems
         local low_intersection = infinite_power_tower(amount)
-        return { '(Will decrease mult if above ', low_intersection, ')', '', '' }
+        return { '(Will decrease Mult if above ', low_intersection, ')', '', '' }
     end
     return { '(Is not defined for values that are not expressible as a fraction with an odd denominator)', '', '', '', '', undefined=true }
 end
@@ -1314,9 +1340,41 @@ function Card:calculate_joker(context, a2, a3, a4, a5, a6, a7, a8, a9) -- any ex
     end
     --- for scrapbook
     if return_value then
-        self.toum_most_recent_trigger = remove_all_properties_of_type_recursively(copy_table(return_value), 'function')
+        local shallow_copy = shallow_copy_table(return_value)
+        self.toum_most_recent_trigger = shallow_copy_table(return_value)
     end
     return return_value
+end
+
+function copy_table_but_not_these_classes(O, classes)
+    seen = seen or {}
+    local O_type = type(O)
+    local copy
+    if O_type == 'table' then
+        if O.is then
+            for i, class in ipairs(classes) do
+                if O:is(class) then
+                    print('found a thing! set nil for a ' .. class)
+                    return nil
+                end
+            end
+        end
+        if getmetatable(O) ~= nil and getmetatable(O) == BigMeta then return Big:new(O) end
+        if getmetatable(O) ~= nil and getmetatable(O) == OmegaMeta then
+            return O:clone()
+        end
+        copy = {}
+        for k, v in next, O, nil do
+            local key = copy_table_but_not_these_classes(k, classes)
+            if key then -- you cannot set the 'nil' property of a table
+                copy[key] = copy_table_but_not_these_classes(v, classes)
+            end
+        end
+        setmetatable(copy, copy_table(getmetatable(O)))
+    else
+        copy = O
+    end
+    return copy
 end
 
 
@@ -1343,7 +1401,12 @@ SMODS.Joker {
     cost = 2,
     calculate = function(self, card, context)
         if context.selling_card and context.card.toum_most_recent_trigger then
-            local effect_to_paste = copy_table(context.card.toum_most_recent_trigger)
+            local dangerous_classes = {
+                Object, 
+                Card, CardArea, Tag, Blind, Game, Controller, Event, EventManager, Node, Moveable,
+                Card_Character, Particles, Sprite, DynaText, UIBox, UIElement, AnimatedSprite,
+            }
+            local effect_to_paste = copy_table_but_not_these_classes(context.card.toum_most_recent_trigger, {Object})
             card.ability.extra.remembered_effect = remove_all_properties_of_type_recursively(effect_to_paste, 'function')
         end
         if context.joker_main then
@@ -2668,7 +2731,7 @@ SMODS.Joker {
     },
     loc_vars = function(self, info_queue, card)
         local vars = {}
-        card.ability.extra.current_effect = card.ability.extra.current_effect or { effect_type = 'message', amount = 'ERROR' }
+        card.ability.extra.current_effect = card.ability.extra.current_effect or { effect_type = 'message', amount = 'MISSING' }
         for i = 1, #card.ability.extra.effect_choices do
             table.insert(vars, card.ability.extra.current_effect.index ~= i)
         end
@@ -2707,8 +2770,13 @@ SMODS.Joker {
                 message = localize('k_reset'),
                 colour = G.C.CHIPS,
                 func = function()
-                    card.ability.extra.current_effect = pseudorandom_element(choosable_effects, pseudoseed('yeah_ill_get_uhhhhhhh'))
-                end
+                    G.E_MANAGER:add_event(Event({
+                        func = function()
+                            card.ability.extra.current_effect = pseudorandom_element(choosable_effects, pseudoseed('yeah_ill_get_uhhhhhhh'))
+                            return true
+                        end,
+                    }))
+                end,
             }
         end
     end

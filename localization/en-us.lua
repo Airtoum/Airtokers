@@ -28,7 +28,7 @@ return {
             a_negate_chips="Negate!",
             a_factorial_chips="!",
             a_rad_2_deg_chips="Radians to Degrees!",
-            a_deg_2_red_chips="Degrees to Radians!",
+            a_deg_2_rad_chips="Degrees to Radians!",
             a_abs_chips="Absolute value!",
             a_succ_chips="Successor!",
             a_succ_chips_rare="Succ!",
