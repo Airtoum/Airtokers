@@ -578,3 +578,117 @@ payload = '''
 #payload = '''
 #G.GAME.current_round.current_hand.chip_text = '-1'
 #'''
+
+# Line numbers for localization function
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "after"
+match_indent = false
+pattern = "local final_line = {}"
+payload = "local line_number = _"
+
+# Variable number of lines for localization
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "before"
+match_indent = false
+pattern = "if loc_target then"
+payload = "local lines_array = {}"
+
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "before"
+match_indent = false
+pattern = "local final_line = {}"
+payload = '''
+    table.insert(lines_array, lines)
+end
+-- Replaces the lines of the displayed text with a sequence of lines selected by these indices from the original lines table, if dictionary_indices is defined.
+if args.vars and args.vars.dictionary_indices then
+    local new_lines_array = {}
+    for _, line_index in ipairs(args.vars.dictionary_indices) do
+        table.insert(new_lines_array, lines_array[line_index])
+    end
+    lines_array = new_lines_array
+end
+for _, lines in ipairs(lines_array) do
+'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+position = "after"
+match_indent = false
+pattern = "for _, subpart in ipairs(part.strings) do"
+payload = '''
+    -- define line_vars to create a variable context for each individual line, indexed by its line number.
+    if type(subpart) ~= 'string' and args.vars and args.vars.line_vars and args.vars.line_vars[line_number] then
+        subpart = format_ui_value(args.vars.line_vars[line_number][tonumber(subpart[1])])
+    end
+'''
+
+#[[patches]]
+#[patches.pattern]
+#target = "functions/UI_definitions.lua"
+#position = "before"
+#match_indent = false
+#pattern = "contents.hand ="
+#payload = '''
+#    if G.GAME.penis then
+#        table.insert(contents.round, {n=G.UIT.R, config={minh = spacing},nodes={}})
+#        table.insert(contents.round, {n=G.UIT.R, config={align = "cm"}, nodes={
+#            {n=G.UIT.C, config={align = "cm", padding = 0.05, minw = 1.45 * 2, minh = 1 * 2, colour = temp_col, emboss = 0.05, r = 0.1}, nodes={
+#                {n=G.UIT.R, config={align = "cm", maxw = 1.35 * 2}, nodes={
+#                  {n=G.UIT.T, config={text = localize('k_penis'), minh = 0.33 * 2, scale = 0.85*scale, colour = G.C.UI.TEXT_LIGHT, shadow = true}},
+#                }},
+#                {n=G.UIT.R, config={align = "cm", r = 0.1, minw = 1.2 * 2, colour = temp_col2, id = 'row_penis_text'}, nodes={
+#                  {n=G.UIT.O, config={object = DynaText({string = {{ref_table = G.GAME, ref_value = 'penis'}}, colours = {G.C.IMPORTANT},shadow = true, scale = 4*scale}),id = 'penis_UI_count'}},
+#                }},
+#            }},
+#        }})
+#    end
+#'''
+#
+#[[patches]]
+#[patches.pattern]
+#target = "functions/UI_definitions.lua"
+#position = "after"
+#match_indent = false
+#pattern = "local spacing = 0.13"
+#payload = '''
+#    if G.GAME.penis then
+#        --scale = scale * 0.9
+#        spacing = spacing * -1
+#    end
+#'''
+
+[[patches]]
+[patches.pattern]
+target = "game.lua"
+position = "before"
+match_indent = false
+pattern = "G.FUNCS.blind_chip_UI_scale(G.hand_text_area.blind_chips)"
+payload = '''
+    if G.GAME.penis then
+        create_UIBox_Penis()
+    end
+'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "at"
+match_indent = false
+pattern = '''
+    G.GAME.hands[text].played = G.GAME.hands[text].played + 1
+    G.GAME.hands[text].played_this_round = G.GAME.hands[text].played_this_round + 1
+'''
+payload = '''
+    G.GAME.hands[text].played = G.GAME.hands[text].played + (G.GAME.penis or 1)
+    G.GAME.hands[text].played_this_round = G.GAME.hands[text].played_this_round + (G.GAME.penis or 1)
+'''
+
+

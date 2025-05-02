@@ -35,7 +35,7 @@ local function number(n)
         --assert(false, 'assertion did not fail')
         return return_n
     end
-    return n
+    return tonumber(n)
 end
 Airtokers.number = number
 
@@ -70,7 +70,7 @@ local function is_positive(a)
     if is_big(a) and a.is_positive then
         return not is_zero(a) and a:is_positive()
     end
-    return a > number(0)
+    return number(a) > number(0)
 end
 Airtokers.is_positive = is_positive
 
@@ -78,7 +78,7 @@ local function is_negative(a)
     if is_big(a) and a.is_negative then
         return a:is_negative()
     end
-    return a < number(0)
+    return number(a) < number(0)
 end
 Airtokers.is_negative = is_negative
 
@@ -292,6 +292,80 @@ SMODS.Atlas {
     py = 95
 }
 
+function create_UIBox_Penis()
+    local scale = 0.4
+    local spacing = 0.13
+    local temp_col = G.C.DYN_UI.BOSS_MAIN
+    local temp_col2 = G.C.DYN_UI.BOSS_DARK
+    local def = {n=G.UIT.ROOT, config={align = "cm", colour = G.C.CLEAR }, nodes={
+        {n=G.UIT.C, config={align = "cm", padding = 0.05, minw = 1.45 * 2, minh = 1 * 2, colour = temp_col, emboss = 0.05, r = 0.1}, nodes={
+            {n=G.UIT.R, config={align = "cm", maxw = 1.35 * 2}, nodes={
+                {n=G.UIT.T, config={text = localize('k_penis'), minh = 0.33 * 2, scale = 0.85*scale, colour = G.C.UI.TEXT_LIGHT, shadow = true}},
+            }},
+            {n=G.UIT.R, config={align = "cm", r = 0.1, minw = 1.2 * 2, colour = temp_col2, id = 'row_penis_text'}, nodes={
+                {n=G.UIT.O, config={object = DynaText({string = {{ref_table = G.GAME, ref_value = 'penis'}}, colours = {G.C.IMPORTANT},shadow = true, scale = 4*scale}),id = 'penis_UI_count'}},
+            }},
+        }},
+    }}
+    local row_round_UI = G.HUD:get_UIE_by_ID('row_round')
+    G.HUD_penis = UIBox{
+        definition = def,
+        config = {major = row_round_UI, align = 'cm', offset = {x=2,y=-0.5}, bond = 'Weak'},
+    }
+    G.HUD_penis:set_role({
+        role_type = 'Major',
+    })
+    G.HUD_penis.states.click.can = true
+    G.HUD_penis.states.drag.can = true
+    G.HUD_penis.T.x = G.GAME.penis_x or G.HUD_penis.T.x
+    G.HUD_penis.T.y = G.GAME.penis_y or G.HUD_penis.T.y
+    local original_penis_stop_drag = G.HUD_penis.stop_drag
+    function G.HUD_penis.stop_drag(self)
+        original_penis_stop_drag(self)
+        G.GAME.penis_x = G.HUD_penis.T.x
+        G.GAME.penis_y = G.HUD_penis.T.y
+    end
+end
+
+table.insert(final_setups, function ()
+    Airtokers.custom_effects.penis = {
+        core = function(amount)
+            G.E_MANAGER:add_event(Event({
+                func = function()
+                    local penis_before = G.GAME.penis
+                    G.GAME.penis = (G.GAME.penis or 0) + 1
+                    if not penis_before then
+                        create_UIBox_Penis()
+                    end
+                    G.HUD_penis:recalculate()
+                    local penis_UI = G.HUD_penis:get_UIE_by_ID('penis_UI_count')
+                    local col = ((amount < 0) and G.C.RED) or G.C.IMPORTANT
+                    ---[[
+                    attention_text({
+                        text = velocitize(amount),
+                        scale = 1.6, 
+                        hold = 0.7,
+                        cover = penis_UI.parent,
+                        cover_colour = col,
+                        align = 'cm',
+                    })
+                    --]]
+                    return true
+                end
+            }))
+        end,
+        mult = false,
+        chips = false,
+        misc = true,
+        translation_key = 'a_penis',
+        colour = G.C.ATTENTION,
+        sound = 'multhit1',
+        volume = 1,
+        amt = nil,
+        ['config.scale'] = 0.7,
+    }
+end)
+
 SMODS.Joker {
     key = 'penis_joker',
     loc_txt = {
@@ -311,8 +385,7 @@ SMODS.Joker {
     calculate = function(self, card, context)
         if context.joker_main then
             return {
-                mult_mod = 2,
-                message = 'penis!',
+                penis = 1,
             }
         end
     end
@@ -1216,6 +1289,18 @@ local function shallow_copy_table(O)
     end
     return copy
   end
+  
+local function remove_all_properties_of_type_recursively(t, type_to_remove)
+    for k, v in pairs(t) do
+        if type(v) == type_to_remove then
+            t[k] = nil
+        end
+        if type(v) == 'table' then
+            remove_all_properties_of_type_recursively(v, type_to_remove)
+        end
+    end
+    return t
+end
 
 -- Mr. Bones hack
 local original_calculate_joker = Card.calculate_joker
@@ -1227,65 +1312,43 @@ function Card:calculate_joker(context, a2, a3, a4, a5, a6, a7, a8, a9) -- any ex
         context_copy.end_of_round = true
         return_value = original_calculate_joker(self, context_copy, a2, a3, a4, a5, a6, a7, a8, a9)
     end
+    --- for scrapbook
+    if return_value then
+        self.toum_most_recent_trigger = remove_all_properties_of_type_recursively(copy_table(return_value), 'function')
+    end
     return return_value
 end
+
 
 SMODS.Joker {
     key = 'scrapbook',
     loc_txt = {
         name = "Scrapbook",
         text = {
-            "Gets another random effect",
-            "when you purchase a {C:attention}Voucher",
-            "when played hand is #1#, gives:" -- two pair
+            "Gives the effect that the most recently",
+            "{C:attention}sold{} card gave when it was last triggered",
         },
     },
     config = {
         extra = {
-            effect_choices = {
-                { effect_type = 'xmult', amount = 1.5, },
-                { effect_type = 'mult', amount = 4, },
-                { effect_type = 'chips', amount = 40, },
-            },
-            effect_list = {
-
-            }
-        },
+            remembered_effect = nil
+        }
     },
     loc_vars = function()
         
-    end,
-    add_effect = function(card)
-        local added_effect = pseudorandom_element(card.ability.extra.effect_choices, pseudoseed('scrapbook'))
-        table.insert(card.ability.extra.effect_list, added_effect)
     end,
     rarity = 1,
     atlas = "Airtokers",
     pos = {x = 0, y = 0},
     cost = 2,
-    set_ability = function(self, card, initial, delay_sprites)
-        G.E_MANAGER:add_event(Event({
-            func = (function(t)
-                self.add_effect(card)
-                return true
-            end),
-        }))
-    end,
     calculate = function(self, card, context)
-        if context.buying_card and context.card.ability.set == 'Voucher' then
-            self.add_effect(card)
+        if context.selling_card and context.card.toum_most_recent_trigger then
+            local effect_to_paste = copy_table(context.card.toum_most_recent_trigger)
+            card.ability.extra.remembered_effect = remove_all_properties_of_type_recursively(effect_to_paste, 'function')
         end
-        if context.joker_main and (next(context.poker_hands['Two Pair']) or next(context.poker_hands['Full House'])) then
-            local next_effect = {}
-            local total_effect = next_effect
-            for i, effect in ipairs(card.ability.extra_effect_list) do
-                next_effect.extra = {}
-                next_effect = next_effect.extra
-                next_effect[effect.effect_type] = effect.amount
-            end
-            -- the top-level object does not contain any effects (besides extra)
-            if total_effect.extra then
-                return total_effect.extra
+        if context.joker_main then
+            if card.ability.extra.remembered_effect then
+                return card.ability.extra.remembered_effect
             end
         end
     end
@@ -2318,6 +2381,21 @@ local function list_to_effect_tower(effects)
     return total_effect
 end
 
+assert(list_to_effect_tower({}) == nil)
+
+assert(list_to_effect_tower({{a = 1}}).a == 1)
+
+assert(list_to_effect_tower({{a = 1}, {b = 2}}).a == 1)
+assert(list_to_effect_tower({{a = 1}, {b = 2}}).extra.b == 2)
+
+assert(list_to_effect_tower({{a = 1, A = 2}, {b = 3, B = 4}}).a == 1)
+assert(list_to_effect_tower({{a = 1, A = 2}, {b = 3, B = 4}}).A == 2)
+assert(list_to_effect_tower({{a = 1, A = 2}, {b = 3, B = 4}}).extra.b == 3)
+assert(list_to_effect_tower({{a = 1, A = 2}, {b = 3, B = 4}}).extra.B == 4)
+
+assert(list_to_effect_tower({{a = 1}, {b = 2}, {c = 3}, {d = 4, D = 5}}).extra.extra.extra.d == 4)
+assert(list_to_effect_tower({{a = 1}, {b = 2}, {c = 3}, {d = 4, D = 5}}).extra.extra.extra.D == 5)
+
 --- A random cycle of ranks is setup for this seed. Each played card will have its rank set to the next in the cycle.
 SMODS.Joker{
     key = 'transmutation',
@@ -2357,8 +2435,14 @@ SMODS.Joker{
                 G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.08,func = function() context.full_hand[i]:flip();play_sound('card1', percent);context.full_hand[i]:juice_up(0.3, 0.3);return true end }))
             end
             for i, card in ipairs(context.full_hand) do
+                local original_base = card.base.value
+                assert(SMODS.change_base(card, nil, G.GAME.toum_transmutation_mapping[original_base]), 'setting the base failed! you should punch airtoum')
+                G.E_MANAGER:add_event(Event({blockable = false, trigger = 'immediate',func = function() 
+                    assert(SMODS.change_base(card, nil, original_base), 'setting the base failed! you should punch airtoum')
+                    return true
+                end }))
                 G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.08,func = function() 
-                    assert(SMODS.change_base(card, nil, G.GAME.toum_transmutation_mapping[card.base.value]), 'setting the base failed! you should punch airtoum')
+                    assert(SMODS.change_base(card, nil, G.GAME.toum_transmutation_mapping[original_base]), 'setting the base failed! you should punch airtoum')
                     return true
                 end }))
                 --[[local next_effect = {}
@@ -2619,12 +2703,390 @@ SMODS.Joker {
                     choosable_effects[#choosable_effects + 1] = v
                 end
             end
-            print(tprint(choosable_effects))
-            card.ability.extra.current_effect = pseudorandom_element(choosable_effects, pseudoseed('yeah_ill_get_uhhhhhhh'))
             return {
                 message = localize('k_reset'),
                 colour = G.C.CHIPS,
+                func = function()
+                    card.ability.extra.current_effect = pseudorandom_element(choosable_effects, pseudoseed('yeah_ill_get_uhhhhhhh'))
+                end
             }
+        end
+    end
+}
+
+local function radix_format(n, b)
+    local place = -8
+    n = n + b ^ (place - 2) -- floating point precision hack. add a speck more granular than this function will go
+    for i= -8, 32 do
+        if b ^ i > n then
+            place = i - 1
+            break
+        end
+    end
+    local radix_string = place <= -1 and '0.' or ''
+    local radix_string_truncated = radix_string
+    while (place >= -8) do
+        local digit = 0
+        while (n - (digit + 1) * (b ^ place) >= 0) do
+            digit = digit + 1
+        end
+        n = n - (digit)*(b ^ place)
+        radix_string = radix_string .. digit
+        radix_string_truncated = (place >= 0 or digit ~= 0) and radix_string or radix_string_truncated
+        place = place - 1
+        if place == -1 then
+            radix_string = radix_string .. '.'
+        end
+    end
+    return radix_string_truncated
+end
+
+local function convert_to_nonary(n)
+    local chips_string = tostring(n)
+    local digit_groups = {}
+    for digit_group in string.gfind(chips_string, '[%d%.]+') do
+        digit_groups[digit_group] = true
+    end
+    for digit_group, v in pairs(digit_groups) do
+        local nonary_length = 0
+        --while digit_group
+        local nonary_digit_group = radix_format(tonumber(digit_group), 9)
+        digit_groups[digit_group] = nonary_digit_group
+        chips_string = string.gsub(chips_string, digit_group, nonary_digit_group, 1)
+    end
+    local status, chips_number_or_error = pcall(number, chips_string)
+    local chips_number = nil
+    if status then
+        chips_number = chips_number_or_error
+    else
+        error('Airtokers convert_to_nonary failed to convert string '.. chips_string ..'  back into number: '.. chips_number_or_error)
+    end
+    assert(chips_number)
+    return chips_number
+end
+
+local assert_equal = function(a, b)
+    if (a == b) then
+        return
+    else
+        error('Assertion failed: Expected '.. type(a).. ' ' .. tostring(a) .. ' to equal ' .. type(b) .. ' ' .. tostring(b), 2)
+    end
+end
+
+assert_equal(convert_to_nonary(0.5), number(0.44444444))
+assert_equal(convert_to_nonary(1/3), number(0.3))
+assert_equal(convert_to_nonary(3000), number(4103))
+assert_equal(convert_to_nonary(6561), number(10000))
+assert_equal(convert_to_nonary(750.7), number(1023.62626262))
+assert_equal(convert_to_nonary(-750.7), number(-1023.62626262))
+
+local wrappedWithNullReturnWarning = function(original_func, name)
+    assert(name)
+    return function (a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20)
+        local return_value = original_func(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20)
+        if return_value == nil then
+            sendWarnMessage(name..' may be being set to nil', 'Airtokers-nil-return-warning')
+        end
+        return return_value
+    end
+end
+
+mod_chips = wrappedWithNullReturnWarning(mod_chips, 'Chips')
+mod_mult = wrappedWithNullReturnWarning(mod_mult, 'Mult')
+
+
+Airtokers.custom_effects.nonary_chips = {
+    core = function(amount)
+        hand_chips = mod_chips(convert_to_nonary(hand_chips))
+    end,
+    chips = true,
+    mult = false,
+    translation_key = 'a_nonary_chips',
+    colour = G.C.CHIPS,
+    sound = 'chips1',
+    volume = 1,
+    ['config.scale'] = 0.6,
+}
+
+
+-- ineffecient algorithm but it will work
+local function try_suit_set(suit_sets, target_func, prune_func, index, used_suits, num_used_suits)
+    index = index or 1
+    used_suits = used_suits or {}
+    num_used_suits = num_used_suits or 0
+    if prune_func and prune_func(num_used_suits) then
+        return false
+    end
+    local suit_set = suit_sets[index]
+    if suit_set == nil then
+        return target_func(num_used_suits)
+    end
+    for _, suit in ipairs(suit_set) do
+        local was_new_suit = false
+        if not used_suits[suit] then
+            was_new_suit = true
+            num_used_suits = num_used_suits + 1
+        end
+        used_suits[suit] = true
+        if try_suit_set(suit_sets, target_func, prune_func, index + 1, used_suits, num_used_suits) then
+            return true
+        else
+            if was_new_suit then
+                used_suits[suit] = false
+                num_used_suits = num_used_suits - 1
+            end
+        end
+    end
+    if #suit_set == 0 then
+        return try_suit_set(suit_sets, target_func, prune_func, index + 1, used_suits, num_used_suits)
+    end
+    return false
+end
+
+assert(try_suit_set({{'h'}, {'s','h'}, {'s','h','c','d'}, {'d'}}, function(n) return n == 3 end, function(n) return n > 3 end))
+assert(try_suit_set({{'h'}, {'s','h'}, {'s','c'}, {'d'}, {'c'}}, function(n) return n == 3 end, function(n) return n > 3 end))
+assert(not try_suit_set({{'h'}, {'s','h'}, {'s','c'}, {'d'}}, function(n) return n == 2 end, function(n) return n > 2 end))
+assert(try_suit_set({{'h'}, {}, {'s','c'}, {}}, function(n) return n == 2 end, function(n) return n > 2 end))
+assert(not try_suit_set({{'h'}, {}, {'s','c'}, {}}, function(n) return n == 3 end, function(n) return n > 3 end))
+assert(not try_suit_set({{'h'}, {'h'}, {}, {'h'}, {}}, function(n) return n == 3 end, function(n) return n > 3 end))
+
+-- actually treating it like "divisors" which has a slightly less vague definition (specifically for 0)
+local function sum_of_factors(n)
+    n = number_round_towards_positive_infinity(n)
+    if is_zero(n) then
+        return number(0)
+    end
+    local original_n = n
+    local original_sign = number(1)
+    if is_negative(n) then
+        original_sign = number(-1)
+    end
+    n = math.abs(n)
+    if (number_greater_than(n, number(100000000))) then
+        return original_n * number(1.5) -- i eyeballed this off of https://oeis.org/A000203/graph
+    end
+    local prime_factorization, n = get_prime_factorization(n)
+    if number_greater_than(n, number(1)) then
+        if is_prime(n) then
+            prime_factorization[n] = 1
+        else
+            return original_n * number(1.5)
+        end
+    end
+    -- shoutouts to https://planetmath.org/formulaforsumofdivisors
+    -- f(30) = 1 + 2 + 3 + 5 + 2*3 + 2*5 + 3*5 + 2*3*5
+    -- f(30) = 1 + 3 + 5 + 3*5 + (2 + 2*3 + 2*5 + 2*3*5)
+    -- f(30) = 1 + 3 + 5 + 3*5 + 2(2*(1-1) + 2*(3-1) + 2*(5-1) + 2*(3*5-1))
+    -- factors(30) = product(powerset(prime_factors(30))), sorta
+    -- f(12) = (2^0 * 3^0) + (2^1 * 3^0) + (2^2 * 3^0) + (2^0 * 3^1) + (2^1 * 3^1) + (2^2 * 3^1)
+    -- f(12) = 1 + 2 + 4 + 3 + 6 + 12
+    -- f(12) = (3^0) * ((2^0) + (2^1) + (2^2)) + (3^1) * ((2^0) + (2^1) + (2^2))
+    -- ac + bc = c(a + b)
+    -- f(12) = ((2^0) + (2^1) + (2^2))((3^0) + (3^1))
+    -- 1, 3, 7, 15
+    -- 1, 4, 13, 40
+    -- 1, 5, 21, 85      
+    -- 1 + 4 + 16 + 64 (+ 256)
+    -- 256 = 64 + 16 + 4 + 1
+    -- this image helped me understand this part https://upload.wikimedia.org/wikipedia/commons/f/fa/Geometric_progression_sum_visual_proof.svg
+    -- f(12) = ((2^(2 + 1) - 1) / (2 - 1))((3^(1 + 1) - 1) / (3 - 1))
+    local product = number(1)
+    for p, m in pairs(prime_factorization) do
+        product = product * (((number(p) ^ number(m + 1)) - number(1)) / (number(p) - number(1)))
+    end
+    return product * original_sign
+end
+
+--print(sum_of_factors(12))
+assert(number_equal(sum_of_factors(12), number(28)))
+assert(number_equal(sum_of_factors(5), number(6)))
+assert(number_equal(sum_of_factors(30), number(72)))
+--print(sum_of_factors(-40))
+assert(number_equal(sum_of_factors(-40), number(-90))) -- 2,2,2,5 = 15 * 6
+assert(number_equal(sum_of_factors(1), number(1)))
+assert(number_equal(sum_of_factors(-1), number(-1)))
+assert(number_equal(sum_of_factors(0), number(0)))
+
+Airtokers.custom_effects.sum_of_factors_chips = {
+    core = function(amount)
+        hand_chips = mod_chips(sum_of_factors(hand_chips))
+    end,
+    mult = false,
+    chips = true,
+    translation_key = 'a_sum_of_factors_chips',
+    colour = G.C.CHIPS,
+    sound = 'chips1',
+    volume = 1,
+    amt = nil,
+    ['config.scale'] = 0.5,
+}
+
+Airtokers.custom_effects.koch_snowflake_chips = {
+    core = function(amount)
+        hand_chips = mod_chips(hand_chips ^ number(math.log(4, 3)))
+    end,
+    mult = false,
+    chips = true,
+    translation_key = 'a_koch_snowflake_chips',
+    colour = G.C.CHIPS,
+    sound = 'chips1',
+    volume = 1,
+    amt = nil,
+    ['config.scale'] = 0.5,
+}
+
+Airtokers.custom_effects.plus_side_length_of_square_with_area_chips = {
+    core = function(amount)
+        hand_chips = mod_chips(hand_chips + math.sqrt(hand_chips))
+    end,
+    mult = false,
+    chips = true,
+    translation_key = 'a_plus_side_length_of_square_with_area_chips',
+    colour = G.C.CHIPS,
+    sound = 'chips1',
+    volume = 1,
+    amt = nil,
+    ['config.scale'] = 0.37,
+}
+
+Airtokers.custom_effects.surface_area_of_a_cube_with_volume_chips = {
+    core = function(amount)
+        hand_chips = mod_chips(number(6) * (hand_chips ^ number(2/3)))
+    end,
+    mult = false,
+    chips = true,
+    translation_key = 'a_surface_area_of_a_cube_with_volume_chips',
+    colour = G.C.CHIPS,
+    sound = 'chips1',
+    volume = 1,
+    amt = nil,
+    ['config.scale'] = 0.37,
+}
+
+local function index_of(list, element)
+    for k, v in pairs(list) do
+        if v == element then
+            return k
+        end
+    end
+    return nil
+end
+
+SMODS.Joker {
+    key = 'receipt',
+    loc_txt = {
+        name = "Receipt",
+        text = {
+            "Gains a random effect", -- 1
+            "when you purchase a {C:attention}Voucher", -- 2
+            "When played hand has exactly {C:attention}3 suits{}:", -- 3
+            "Converts Chips to {C:chips}Nonary", -- 4
+            "{C:chips}Increments digits{} in Chips", -- 5
+            "Sets Chips to the {C:chips}Sum of its divisors", --6
+            "Sets Chips to the {C:chips}Measure of a Chips-sized Koch Snowflake", -- 7
+            "{C:chips}#1#{} Chips", -- 8
+            "Sets Chips to the {C:chips}Surface area of a Chips-volume cube", -- 9
+        },
+    },
+    effect_formatters = {
+        velocitize,
+    },
+    effect_choices = {
+        { index = 1, dict_index = 4, effect_type = 'nonary_chips', amount = 1, },
+        { index = 2, dict_index = 5, effect_type = 'increase_digits_chips', amount = 1, },
+        { index = 3, dict_index = 6, effect_type = 'sum_of_factors_chips', amount = 1, },
+        { index = 5, dict_index = 8, effect_type = 'chips', amount = 30, formatter = velocitize },
+        { index = 6, dict_index = 9, effect_type = 'surface_area_of_a_cube_with_volume_chips', amount = 1, },
+    },
+    rare_effect_choices = {
+        { index = 4, dict_index = 7, effect_type = 'koch_snowflake_chips', amount = 1, },
+    },
+    normal_effect_rate = 9,
+    rare_effect_rate = 1,
+    config = {
+        extra = {
+            effect_list = {
+
+            },
+        },
+    },
+    loc_vars = function(self, info_queue, card)
+        local vars = {
+            dictionary_indices = {1, 2, 3},
+            line_vars = {{},{},{}},
+        }
+        for i, effect in ipairs(card.ability.extra.effect_list) do
+            table.insert(vars.dictionary_indices, effect.dict_index)
+            table.insert(vars.line_vars, {(self.effect_formatters[effect.formatter_index] or identity)(effect.amount)})
+        end
+        return { 
+            vars = vars,
+        }
+    end,
+    add_effect = function(self, card)
+        local pool_of_choices = { { index = 1, dict_index = 1, effect_type = 'message', amount = 'error', }, }
+        local pools = {
+            { rate = self.normal_effect_rate, choices = self.effect_choices },
+            { rate = self.rare_effect_rate, choices = self.rare_effect_choices }
+        }
+        local total_rate = 0
+        for i, v in ipairs(pools) do
+            total_rate = total_rate + v.rate
+        end
+        -- pseudorandom returns on interval of [0..1)
+        local polled_rate = (pseudorandom(pseudoseed('receipt_rarity'))) * total_rate
+        local check_rate = 0
+        for i, v in ipairs(pools) do        
+            if polled_rate >= check_rate and polled_rate < check_rate + v.rate then
+                pool_of_choices = v.choices
+                break
+            end 
+            check_rate = check_rate + v.rate
+        end
+        local added_effect = pseudorandom_element(pool_of_choices, pseudoseed('receipt'))
+        -- create a different instance of the table
+        added_effect = {
+            dict_index = added_effect.dict_index,
+            effect_type = added_effect.effect_type,
+            amount = added_effect.amount,
+            formatter_index = index_of(self.effect_formatters, added_effect.formatter) or 0,
+        }
+        table.insert(card.ability.extra.effect_list, added_effect)
+    end,
+    rarity = 2,
+    atlas = "Airtokers",
+    pos = {x = 0, y = 0},
+    cost = 9,
+    set_ability = function(self, card, initial, delay_sprites)
+        G.E_MANAGER:add_event(Event({
+            func = (function(t)
+                self:add_effect(card)
+                return true
+            end),
+        }))
+    end,
+    calculate = function(self, card, context)
+        if context.buying_card and context.card.ability.set == 'Voucher' then
+            self:add_effect(card)
+        end
+        if context.joker_main then
+            local suit_sets = {}
+            for i, played_card in ipairs(context.full_hand) do
+                local played_card_suit_set = {}
+                for k, v in pairs(SMODS.Suits) do
+                    if played_card:is_suit(v.key) then
+                        table.insert(played_card_suit_set, v.key)
+                    end
+                end
+                table.insert(suit_sets, played_card_suit_set)
+            end
+            if try_suit_set(suit_sets, function(n) return n == 3 end, function(n) return n > 3 end) then
+                local effects = {}
+                for i, effect in ipairs(card.ability.extra.effect_list) do
+                    table.insert(effects, { [effect.effect_type] = effect.amount })
+                end
+                return list_to_effect_tower(effects)
+            end
         end
     end
 }
