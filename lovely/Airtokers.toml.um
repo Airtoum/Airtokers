@@ -347,6 +347,14 @@ match_indent = false
 pattern = "G.GAME.chips/G.GAME.blind.chips >= 0.25 then"
 payload = "(G.GAME.chips/G.GAME.blind.chips >= 0.25 or G.GAME.chips == G.GAME.blind.chips) then"
 
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+position = "at"
+match_indent = false
+pattern = "to_big(G.GAME.chips)/G.GAME.blind.chips >= to_big(0.25) then"
+payload = "(to_big(G.GAME.chips)/G.GAME.blind.chips >= to_big(0.25) or to_big(G.GAME.chips) == to_big(G.GAME.blind.chips)) then"
+
 ## Allow cardareas to not set rotation of a joker
 [[patches]]
 [patches.pattern]
@@ -684,11 +692,63 @@ position = "at"
 match_indent = false
 pattern = '''
     G.GAME.hands[text].played = G.GAME.hands[text].played + 1
-    G.GAME.hands[text].played_this_round = G.GAME.hands[text].played_this_round + 1
 '''
 payload = '''
     G.GAME.hands[text].played = G.GAME.hands[text].played + (G.GAME.penis or 1)
+'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "at"
+match_indent = false
+pattern = '''
+    G.GAME.hands[text].played_this_round = G.GAME.hands[text].played_this_round + 1
+'''
+payload = '''
     G.GAME.hands[text].played_this_round = G.GAME.hands[text].played_this_round + (G.GAME.penis or 1)
+'''
+
+#[[patches]]
+#[patches.pattern]
+#target = "game.lua"
+#position = "at"
+#match_indent = false
+#pattern = "for k, v in pairs(self.I.CARDAREA) do"
+#payload = "for k, v in pairs({}) do"
+#
+#[[patches]]
+#[patches.pattern]
+#target = "game.lua"
+#position = "at"
+#match_indent = false
+#pattern = "for k, v in pairs(self.I.CARD) do"
+#payload = "for k, v in pairs({}) do"
+
+## canvas-on-card rendering
+[[patches]]
+[patches.pattern]
+target = "engine/sprite.lua"
+position = "before"
+match_indent = false
+pattern = '''
+else
+        love.graphics.draw(
+'''
+payload = '''
+    elseif self.canvas then
+        local current_shader =love.graphics.getShader()
+        local apparent_scale_factor_w = (71 / self.canvas:getWidth())
+        local apparent_scale_factor_h = (95 / self.canvas:getHeight())
+        current_shader:send("image_details", {71 / apparent_scale_factor_w, 95 / apparent_scale_factor_h})
+        current_shader:send("texture_details", {0, 0, 71 / apparent_scale_factor_w, 95 / apparent_scale_factor_h})
+        love.graphics.draw(
+            self.canvas,
+            0, 0,
+            0,
+            apparent_scale_factor_w * self.VT.w/(self.T.w),
+            apparent_scale_factor_h *self.VT.h/(self.T.h)
+        )
 '''
 
 

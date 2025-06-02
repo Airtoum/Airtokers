@@ -313,9 +313,37 @@ local final_setups = {}
 --Creates an atlas for cards to use
 SMODS.Atlas {
     key = "Airtokers",
-    path = "Airtokers.png",
+    path = "AirtokersArt.png",
     px = 71,
-    py = 95
+    py = 95,
+}
+
+SMODS.Atlas {
+    key = "CardRack",
+    path = "CardRack.png",
+    px = 71,
+    py = 95,
+}
+
+SMODS.Atlas {
+    key = "Menu",
+    path = "Menu.png",
+    px = 71,
+    py = 113,
+}
+
+SMODS.Atlas {
+    key = "SpinToWin",
+    path = "Spin to Win.png",
+    px = 71,
+    py = 95,
+}
+
+SMODS.Atlas {
+    key = "Counterweight",
+    path = "Counterweight.png",
+    px = 71,
+    py = 95,
 }
 
 function create_UIBox_Penis()
@@ -435,7 +463,7 @@ SMODS.Joker {
     end,
     rarity = 1,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 1, y = 0},
     cost = 4,
 }
 
@@ -514,23 +542,120 @@ local original_cardarea_click = CardArea.click
 function CardArea:click(a1, a2, a3, a4, a5, a6, a7, a8, a9)
     local return_value = original_cardarea_click(self, a1, a2, a3, a4, a5, a6, a7, a8, a9)
     if self.mini_deck then 
+        G.FUNCS.mini_deck_info(self)
+    end
+    return return_value
+end
+
+function Airtokers.property_map(t, prop)
+    local r = {}
+    for k, v in pairs(t) do
+        r[k] = v[prop] or 'nil'
+    end
+    return r
+end
+
+--[[
+function prismo()
+    local _, hungry_joker = next(SMODS.find_card('j_toum_hungry_joker'))
+    local swallowed_card = hungry_joker.swallowed.cards[1]
+    for k, v in ipairs(G.DRAW_HASH) do
+        if v == hungry_joker then
+            print(k..': hungry joker')
+        end
+        if v == swallowed_card then
+            print(k..': swallowed card')
+        end
+        if v.is and v:is(UIBox) and v.parent and v.parent == G.jokers then
+            print(k..': G.Jokers UIBox')
+        end
+    end
+end
+function pramso()
+    local _, hungry_joker = next(SMODS.find_card('j_toum_hungry_joker'))
+    local swallowed_card = hungry_joker.swallowed.cards[1]
+    for k, v in ipairs(G.CONTROLLER.collision_list) do
+        if v == hungry_joker then
+            print(k..': hungry joker')
+        end
+        if v == swallowed_card then
+            print(k..': swallowed card')
+        end
+        if v.is and v:is(UIBox) and v.parent and v.parent == G.jokers then
+            print(k..': G.Jokers UIBox')
+        end
+    end
+end
+function jisma()
+    local _, hungry_joker = next(SMODS.find_card('j_toum_hungry_joker'))
+    local swallowed_card = hungry_joker.swallowed.cards[1]
+    for k, v in ipairs(G.I.CARD) do
+        if v == hungry_joker then
+            print(k..': hungry joker')
+        end
+        if v == swallowed_card then
+            print(k..': swallowed card')
+        end
+        if v.is and v:is(UIBox) and v.parent and v.parent == G.jokers then
+            print(k..': G.Jokers UIBox')
+        end
+    end
+end
+--]]
+
+local original_card_click = Card.click
+function Card:click(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+    if self.config and self.config.center and self.config.center.toum_click and type(self.config.center.toum_click) == 'function' then
+        local return_value = self.config.center:toum_click(self)
+        if return_value then
+            return return_value
+        end
+    end
+    local return_value = original_card_click(self, a1, a2, a3, a4, a5, a6, a7, a8, a9)
+    if self.area and self.area ~= G.deck and self.area.mini_deck and self.area.cards[1] == self then 
         G.FUNCS.mini_deck_info(self.area)
     end
     return return_value
 end
 
-local original_card_click = Card.click
-function Card:click(a1, a2, a3, a4, a5, a6, a7, a8, a9) 
-    local return_value = original_card_click(self, a1, a2, a3, a4, a5, a6, a7, a8, a9)
-    if self.area and self.area ~= G.deck and self.area.mini_deck and self.area.cards[1] == self then 
-        G.FUNCS.mini_deck_info(self.area)
+local function index_of(list, element)
+    for k, v in pairs(list) do
+        if v == element then
+            return k
+        end
     end
+    return nil
 end
+
+SMODS.DrawStep {
+    key = 'early_center',
+    order = -10000,
+    func = function(self, layer)
+        local center = self.config.center
+        if center.early_draw and type(center.early_draw) == 'function' then
+            center:early_draw(self, layer)
+        end
+    end,
+    conditions = { vortex = false, facing = 'front' },
+}
+
+SMODS.DrawStep {
+    key = 'draw_after_drawhash',
+    order = 1013,
+    func = function(self, layer)
+        local center = self.config.center
+        if center.draw_after_drawhash and type(center.draw_after_drawhash) == 'function' then
+            center:draw_after_drawhash(self, layer)
+        end
+    end,
+    conditions = { vortex = false },
+}
 
 -- needs special hook for saving
 SMODS.Joker {
-    shrunken_scale = 0.2,
-    inverse_shrunken_scale = 1 / 0.2,
+    shrunken_scale = 0.5,
+    inverse_shrunken_scale = 1 / 0.5,
+    swallowed_vertical_alignment = -0.1,
     key = 'hungry_joker',
     loc_txt = {
         name = "Hungry Joker",
@@ -547,22 +672,31 @@ SMODS.Joker {
     end,
     rarity = 2,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 2, y = 0},
     -- swallows 1 card from your deck when blind is selected. when sold, returns all swallowed cards back to your deck 
     cost = 3,
     set_ability = function(self, card, initial, delay_sprites)
         card.swallowed = CardArea(0, 0, 0, 0, {card_limit = 500, type = 'deck'})
         -- perhaps incorporate the offset and scale into the final design of the card. leave a hole in the art?
-        card.swallowed:set_alignment({major = card, bond = 'Strong', type = 'bm', offset = {x = 0, y = 0.1} })
+        card.swallowed:set_alignment({major = card, bond = 'Strong', type = 'bm', offset = {x = 0, y = self.swallowed_vertical_alignment} })
         card.swallowed.separate_container_for_playing_cards = true
         card.swallowed.mini_deck = true
+        -- render on bottom
+        table.remove(G.I.CARDAREA, index_of(G.I.CARDAREA, card.swallowed))
+        table.insert(G.I.CARDAREA, 1, card.swallowed)
+        -- invisible click card, on top
+        --card.invisible_click_card = Card(0,0,0,0,pseudorandom_element(G.P_CARDS, pseudoseed('hungry_i_guess')), G.P_CENTERS.c_base)
+        --card.invisible_click_card:set_alignment({major = card, bond = 'Strong', type = 'bm', offset = {x = 0, y = self.swallowed_vertical_alignment} })
+        --card.invisible_click_card.states.visible = false
+        --card.invisible_click_card.T.h = card.invisible_click_card.T.h * self.shrunken_scale
+        --card.invisible_click_card.T.w = card.invisible_click_card.T.w * self.shrunken_scale
     end,
     toum_on_save = function(self, card)
         card.ability.extra.swallowed = card.swallowed:save()
     end,
     load = function(self, card, card_table, other_card) -- i'm pretty sure other_card is vestigial
         card.swallowed = CardArea(0, 0, 0, 0, {card_limit = 500, type = 'deck'})
-        card.swallowed:set_alignment({major = card, bond = 'Strong', type = 'bm', offset = {x = 0, y = 0.1} })
+        card.swallowed:set_alignment({major = card, bond = 'Strong', type = 'bm', offset = {x = 0, y = self.swallowed_vertical_alignment} })
         card.swallowed.separate_container_for_playing_cards = true
         card.swallowed.mini_deck = true
         card.swallowed:load(card_table.ability.extra.swallowed)
@@ -570,6 +704,9 @@ SMODS.Joker {
             v.T.h = v.T.h * self.shrunken_scale
             v.T.w = v.T.w * self.shrunken_scale
         end
+        -- render on bottom
+        table.remove(G.I.CARDAREA, index_of(G.I.CARDAREA, card.swallowed))
+        table.insert(G.I.CARDAREA, 1, card.swallowed)
     end,
     calculate = function(self, card, context)
         if context.ending_shop and not context.blueprint then
@@ -577,47 +714,52 @@ SMODS.Joker {
             for i, card_to_swallow in ipairs(G.deck.cards) do
                 if not card_to_swallow.swallowed_by_toum_hungry_joker then
                     table.insert(cards_to_swallow, card_to_swallow)
+                    -- render on top
+                    --table.remove(G.I.CARD, index_of(G.I.CARD, card))
+                    --table.insert(G.I.CARD, card)
                 end
             end
-            local swallowed_card = pseudorandom_element(cards_to_swallow, pseudoseed('hungry'))
-            -- local swallowed_card = G.deck.cards[1]
-            if card.swallowed == nil then
-                error('Hungry Joker did not have a CardArea')
+            local swallowed_anything = false
+            for i = 1, card.ability.extra.swallowed_cards do
+                local swallowed_card = pseudorandom_element(cards_to_swallow, pseudoseed('hungry'))
+                -- local swallowed_card = G.deck.cards[1]
+                if card.swallowed == nil then
+                    error('Hungry Joker did not have a CardArea')
+                end
+                if not swallowed_card then
+                    break
+                end
+                swallowed_anything = true
+                swallowed_card.swallowed_by_toum_hungry_joker = true
+                G.E_MANAGER:add_event(Event({
+                    trigger = 'ease',
+                    ease = 'elastic',
+                    blockable = false,
+                    ref_table = swallowed_card.T,
+                    ref_value = 'h',
+                    ease_to = swallowed_card.T.h * self.shrunken_scale,
+                    delay =  0.4,
+                    func = (function(t) return t end)
+                }))
+                G.E_MANAGER:add_event(Event({
+                    trigger = 'ease',
+                    ease = 'elastic',
+                    blockable = false,
+                    ref_table = swallowed_card.T,
+                    ref_value = 'w',
+                    ease_to = swallowed_card.T.w * self.shrunken_scale,
+                    delay =  0.4,
+                    func = (function(t) return t end)
+                }))
+                draw_card(G.deck, card.swallowed, 50, 'down', false, swallowed_card)
+                G.E_MANAGER:add_event(Event({
+                    func = function()
+                        swallowed_card.swallowed_by_toum_hungry_joker = nil
+                        return true
+                    end,
+                }))
             end
-            if not swallowed_card then
-                return nil
-            end
-            swallowed_card.swallowed_by_toum_hungry_joker = true
-            G.E_MANAGER:add_event(Event({
-                trigger = 'ease',
-                ease = 'elastic',
-                blockable = false,
-                ref_table = swallowed_card.T,
-                ref_value = 'h',
-                ease_to = swallowed_card.T.h * self.shrunken_scale,
-                delay =  0.4,
-                func = (function(t) return t end)
-            }))
-            G.E_MANAGER:add_event(Event({
-                trigger = 'ease',
-                ease = 'elastic',
-                blockable = false,
-                ref_table = swallowed_card.T,
-                ref_value = 'w',
-                ease_to = swallowed_card.T.w * self.shrunken_scale,
-                delay =  0.4,
-                func = (function(t) return t end)
-            }))
-            draw_card(G.deck, card.swallowed, 50, 'down', false, swallowed_card)
-            G.E_MANAGER:add_event(Event({
-                func = function()
-                    swallowed_card.swallowed_by_toum_hungry_joker = nil
-                    return true
-                end,
-            }))
-            return {
-                
-            }
+            return swallowed_anything and {} or nil
         end
         if context.selling_self and not context.blueprint then
             local spill_cards_into = #G.hand.cards > 0 and G.hand or G.deck
@@ -665,8 +807,51 @@ SMODS.Joker {
                 delay =  1.06*0.7,
             }))
         end
+    end,
+    --[[
+    early_draw = function(self, card, layer)
+        if card.swallowed == nil then
+            error('Hungry Joker did not have a CardArea')
+        end
+        card.swallowed:draw(layer)
+        for i, swallowed_card in ipairs(card.swallowed.cards) do
+            swallowed_card.temporary_invisible = {{nil}}
+            if not card.marked_as_early_draw then
+                card.marked_as_early_draw = true
+                print('hunry joker early draw')
+            end
+        end
+    end,
+    draw = function(self, card, layer)
+        if not card.marked_as_draw then
+            card.marked_as_draw = true
+            print('hunry joker draw')
+        end
     end
+    ]]
+    --[[
+    toum_click = function(self, card)
+        print('toum click')
+        if index_of(G.CONTROLLER.collision_list, card.swallowed) or index_of(G.CONTROLLER.collision_list, card.swallowed.cards[1]) then
+            print('toum click activate!!')
+            card.swallowed:click()
+            return true
+        end
+    end,
+    --]]
+    -- this makes the cards clickable like they're on top of hungry joker even if they render below hungry joker
+    draw_after_drawhash = function(self, card, layer)
+        for i, swallowed_card in ipairs(card.swallowed.cards) do
+            local index_in_draw_hash = index_of(G.DRAW_HASH, swallowed_card)
+            if index_in_draw_hash then
+                table.remove(G.DRAW_HASH, index_in_draw_hash)
+                add_to_drawhash(swallowed_card)
+            end
+        end
+    end,
 }
+
+--SMODS.DrawSteps['center'].func = function() end
 
 local function count_played_cards()
     local tally = 0
@@ -700,7 +885,7 @@ SMODS.Joker {
     end,
     rarity = 2,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 3, y = 0},
     cost = 6,
     set_ability = function(self, card, initial, delay_sprites)
         --card.ability.extra.mult = self.config.extra.mult:clone()
@@ -738,7 +923,7 @@ SMODS.Joker {
     end,
     rarity = 1,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 4, y = 0},
     cost = 2,
     calculate = function(self, card, context)
         if context.joker_main then
@@ -884,6 +1069,11 @@ Airtokers.custom_effects.toum_dollars = { -- reimplementation because Joker effe
     amt = nil,
 }
 
+SMODS.Shader {
+    key = 'logarithmic',
+    path = 'logarithmic.fs',
+}
+
 SMODS.Joker {
     key = 'log_joker',
     loc_txt = {
@@ -917,7 +1107,7 @@ SMODS.Joker {
     end,
     rarity = 2,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 0, y = 1},
     cost = 2,
     calculate = function(self, card, context)
         if context.other_joker and G.GAME.current_round.hands_left == 0 then
@@ -949,6 +1139,61 @@ SMODS.Joker {
                 card = card,
             }
         end
+    end,
+    draw = function(self, card, layer)
+        local working_canvas = card.children.center.canvas
+        love.graphics.setCanvas(working_canvas)
+        love.graphics.clear(0,0,0,0)
+        --card.children.center.canvas = nil -- lest it try to draw its canvas on itself! this lets it fallback to the atlas
+        --card.children.center:draw_shader('toum_logarithmic', nil, 2.0)
+        local moveable = card.children.center
+        love.graphics.push()
+        love.graphics.reset()
+        love.graphics.setCanvas(working_canvas)
+        --[[
+        love.graphics.scale(G.TILESCALE*G.TILESIZE)
+        love.graphics.translate(
+            -moveable.VT.w/2,
+            -moveable.VT.h/2
+        )
+        love.graphics.translate(
+            -1*1*(1)/2,
+            -1*1*(1)/2)
+        --love.graphics.translate(-2, -2)
+        --love.graphics.scale(card.children.center.VT.w, card.children.center.VT.h)
+        print(card.children.center.VT.x, card.children.center.VT.y, card.children.center.VT.w, card.children.center.VT.h)
+        love.graphics.scale(1/(card.children.center.scale.x/card.children.center.VT.w), 1/(card.children.center.scale.y/card.children.center.VT.h))
+        local _draw_major = card.children.center.role.draw_major or card.children.center
+        --]]
+        love.graphics.scale(3)
+        G.SHADERS['toum_logarithmic']:send("texture_details", card.children.center:get_pos_pixel())
+        G.SHADERS['toum_logarithmic']:send("image_details",card.children.center:get_image_dims())
+        G.SHADERS['toum_logarithmic']:send('screen_scale', 1)
+        G.SHADERS['toum_logarithmic']:send('mouse_screen_pos', {0,0})
+        G.SHADERS['toum_logarithmic']:send('hovering', 0)
+        G.SHADERS['toum_logarithmic']:send("shadow", false)
+        G.SHADERS['toum_logarithmic']:send("logarithmic", G.TIMERS.REAL)
+        love.graphics.setShader( G.SHADERS['toum_logarithmic'])
+        --love.graphics.setShader()
+        card.children.center:set_sprite_pos(card.children.center.sprite_pos)
+        love.graphics.draw(
+            card.children.center.atlas.image,
+            card.children.center.sprite,
+            0 ,0,
+            0
+        )
+        --card.children.center.canvas = working_canvas
+        love.graphics.pop()
+        love.graphics.setCanvas(G.CANVAS)
+        love.graphics.setShader()
+    end,
+    set_sprites = function(self, card, front)
+        card.children.center.canvas = love.graphics.newCanvas(71* 3, 95 *3)
+        --card.T.scale = card.T.scale * (1/3)
+        --card.T.w = card.T.w * (1/3)
+        --card.T.h = card.T.h * (1/3)
+        --card.children.center.scale.x = card.children.center.scale.x * (1/3)
+        --card.children.center.scale.y = card.children.center.scale.y * (1/3)
     end
 }
 
@@ -1006,9 +1251,9 @@ local function exp_mult_disclaimer(amount_raw)
 end
 
 SMODS.Joker {
-    key = 'exp_joker',
+    key = 'lightning_rod_oven',
     loc_txt = {
-        name = "Exp Joker",
+        name = "Lightning Rod Oven",
         text = {
             "Applies {C:red}#22##1##23#^{} Mult if scored hand has:",
             "{C:attention}#2#{}#3#{V:1}#4#{}#5#{C:attention}#6#{}",
@@ -1054,7 +1299,7 @@ SMODS.Joker {
     end,
     rarity = 1,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 1, y = 1},
     cost = 2,
     pick_trigger_requirements = function(self)
         self.trigger_requirements = {}
@@ -1193,7 +1438,7 @@ SMODS.Joker {
     end,
     rarity = 3,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 2, y = 1},
     cost = 7,
     arrive = function(card, death_card)
         local prior_gamespeed = G.SETTINGS.GAMESPEED
@@ -1222,7 +1467,7 @@ SMODS.Joker {
                                 SMODS.saved = false
                                 SMODS.calculate_context({ game_over = true })
                                 if SMODS.saved then
-                                    death_card.reaper_ward = true
+                                    death_card.ability.reaper_ward = true
                                     card.ability.extra.arrived = false
                                     return true
                                 end
@@ -1240,7 +1485,7 @@ SMODS.Joker {
         for k, v in pairs(G.I.CARDAREA) do
             if v.cards then
                 for i, vv in ipairs(v.cards) do
-                    if vv.ability and vv.ability.name == 'Death' and vv.facing == 'front' and not card.ability.extra.arrived and not vv.reaper_ward then
+                    if vv.ability and vv.ability.name == 'Death' and vv.facing == 'front' and not card.ability.extra.arrived and not vv.ability.reaper_ward then
                         G.E_MANAGER:add_event(Event({
                             func = (function(t)
                                 -- don't trigger while paused when added to deck, not as funny as looking at death in collection
@@ -1257,7 +1502,7 @@ SMODS.Joker {
     end,
     calculate = function(self, card, context)
         if (context.emplace_card or context.flip_card or context.see_death) and context.card then
-            if context.card.ability and context.card.ability.name == 'Death' and context.card.facing == 'front' and not card.ability.extra.arrived and not context.card.reaper_ward then
+            if context.card.ability and context.card.ability.name == 'Death' and context.card.facing == 'front' and not card.ability.extra.arrived and not context.card.ability.reaper_ward then
                 return self.arrive(card, context.card)
             end
         end
@@ -1397,7 +1642,7 @@ SMODS.Joker {
     end,
     rarity = 1,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 3, y = 1},
     cost = 2,
     calculate = function(self, card, context)
         if context.selling_card and context.card.toum_most_recent_trigger then
@@ -1497,9 +1742,12 @@ SMODS.Joker {
         } }
     end,
     rarity = 1,
-    atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    atlas = "SpinToWin",
+    pos = {v = 7, y = 0},
     cost = 2,
+    --set_sprites = function(self, card, front)
+    --    card.children.center
+    --end,
     set_ability = function(self, card, initial, delay_sprites)
         G.E_MANAGER:add_event(Event({
             func = (function(t)
@@ -1556,10 +1804,8 @@ SMODS.Joker {
     end
 }
 
-
-Airtokers.custom_effects.digit_reverse_chips = {
-    core = function(amount)
-        local chips_string = tostring(hand_chips)
+local function reverse_digits(n)
+    local chips_string = tostring(n)
         local digit_groups = {}
         for digit_group in string.gfind(chips_string, '%d+') do
             digit_groups[digit_group] = true
@@ -1570,7 +1816,15 @@ Airtokers.custom_effects.digit_reverse_chips = {
             chips_string = string.gsub(chips_string, digit_group, reversed_digit_group, 1)
         end
         local chips_number = number(chips_string)
-        hand_chips = mod_chips(chips_number)
+        return (chips_number)
+end
+
+--assert(number_equal(reverse_digits(number(1234567)), number(7654321)))
+--assert(number_equal(reverse_digits(number(123.4567)), number(765.4321)))
+
+Airtokers.custom_effects.digit_reverse_chips = {
+    core = function(amount)
+        hand_chips = mod_chips(reverse_digits(hand_chips))
     end,
     mult = false,
     chips = true,
@@ -2020,7 +2274,7 @@ SMODS.Joker {
     end,
     rarity = 3,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 0, y = 2},
     cost = 2,
     calculate = function(self, card, context)
         if context.joker_main then
@@ -2047,7 +2301,7 @@ SMODS.Joker{
     loc_txt = {
         name = "Card Rack",
         text = {
-            "Draw an {C:attention}extra{} hand of cards",
+            "Draw an {C:attention}extra hand{} of cards",
             "when opening a {C:attention}Booster Pack",
         },
     },
@@ -2056,8 +2310,8 @@ SMODS.Joker{
         
     end,
     rarity = 1,
-    atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    atlas = "CardRack",
+    pos = {x = 1, y = 1},
     cost = 2,
     calculate = function(self, card, context)
         if context.open_booster then
@@ -2140,7 +2394,7 @@ SMODS.Joker{
     end,
     rarity = 1,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 2, y = 2},
     cost = 2,
     calculate = function(self, card, context)
         if context.joker_main then
@@ -2321,7 +2575,7 @@ SMODS.Joker{
     end,
     rarity = 3,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 3, y = 2},
     cost = 8,
     custom_check_for_buy_space = function(self, card, is_negative)
         if not (#G.jokers.cards < G.jokers.config.card_limit + (is_negative and 1 or 0)) then
@@ -2404,7 +2658,7 @@ SMODS.Consumable {
     },
     loc_vars = function()
     end,
-    atlas = "Airtokers",
+    atlas = "Counterweight",
     pos = {x = 0, y = 0},
     add_to_deck = function(self, card, from_debuff)
         card.ability.useless_consumable = true
@@ -2478,7 +2732,7 @@ SMODS.Joker{
     end,
     rarity = 2,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 4, y = 2},
     cost = 7,
     start_of_run_setup = function(self)
         G.GAME.toum_transmutation_mapping = {}
@@ -2569,7 +2823,7 @@ SMODS.Joker{
     end,
     rarity = 2,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 0, y = 3},
     cost = 4,
 }
 
@@ -2674,7 +2928,7 @@ SMODS.Joker{
     end,
     rarity = 3,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 1, y = 3},
     cost = 1,
     calculate = function(self, card, context)
         if (
@@ -2738,8 +2992,10 @@ SMODS.Joker {
         return { vars = vars }
     end,
     rarity = 1,
-    atlas = "Airtokers",
+    atlas = "Menu",
     pos = {x = 0, y = 0},
+    display_size = { w = 71, h = 113 },
+    --pixel_size = { w = 71, h = 113 },
     cost = 2,
     set_ability = function(self, card, initial, delay_sprites)
         G.E_MANAGER:add_event(Event({
@@ -3031,15 +3287,6 @@ Airtokers.custom_effects.surface_area_of_a_cube_with_volume_chips = {
     ['config.scale'] = 0.37,
 }
 
-local function index_of(list, element)
-    for k, v in pairs(list) do
-        if v == element then
-            return k
-        end
-    end
-    return nil
-end
-
 SMODS.Joker {
     key = 'receipt',
     loc_txt = {
@@ -3123,7 +3370,7 @@ SMODS.Joker {
     end,
     rarity = 2,
     atlas = "Airtokers",
-    pos = {x = 0, y = 0},
+    pos = {x = 3, y = 3},
     cost = 9,
     set_ability = function(self, card, initial, delay_sprites)
         G.E_MANAGER:add_event(Event({
@@ -3168,7 +3415,7 @@ SMODS.Joker {
 ------ When this Joker is scored, its chips and grey mult get multiplied together, and then added to your round score, and then they reset.
 ------ After normal scoring ends, the numbers in this card do not reset, so you may desync this chips with the normal chips.
 ------ Setting chips from selecting a hand only updates this card's chip score when this card's chip score is 0.
-
+--- A joker that makes things a lot cheaper, but "turns off the lights." Do `SMODS.DrawSteps['center'].func = function() end` to see what I mean
 
 
 

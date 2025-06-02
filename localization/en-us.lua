@@ -51,7 +51,7 @@ return {
             k_plus_distance="+#1# Distance",
         },
         dictionary = {
-            k_penis="Penis",
+            k_penis="Penises",
         },
     },
 }
