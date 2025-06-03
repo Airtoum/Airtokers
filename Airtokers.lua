@@ -651,6 +651,16 @@ SMODS.DrawStep {
     conditions = { vortex = false },
 }
 
+local original_card_remove_from_deck = Card.remove_from_deck
+function Card:remove_from_deck(from_debuff, a2, a3, a4, a5, a6, a7, a8, a9)
+    local return_value = original_card_remove_from_deck(self, from_debuff, a2, a3, a4, a5, a6, a7, a8, a9)
+    local obj = self.config.center
+    if obj and obj.remove_from_deck_even_if_not_in_deck and type(obj.remove_from_deck_even_if_not_in_deck) == 'function' then
+        obj:remove_from_deck_even_if_not_in_deck(self, from_debuff)
+    end
+    return return_value
+end
+
 -- needs special hook for saving
 SMODS.Joker {
     shrunken_scale = 0.5,
@@ -791,7 +801,7 @@ SMODS.Joker {
             return {}
         end
     end,
-    remove_from_deck = function(self, card, from_debuff)
+    remove_from_deck_even_if_not_in_deck = function(self, card, from_debuff)
         if not from_debuff then
             for i, v in ipairs(card.swallowed) do
                 v:start_dissolve()
