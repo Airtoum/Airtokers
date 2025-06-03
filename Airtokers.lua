@@ -1694,6 +1694,32 @@ function Airtokers.cos(x)
   return math.cos(x)
 end
 
+SMODS.DrawStep {
+    key = 'stickers_2',
+    order = 41,
+    func = function(self, layer)
+        local center = self.config.center
+        if center.reflect_stake_stickers then
+            if self.sticker and G.shared_stickers[self.sticker] then
+                local original_sticker_rotation = G.shared_stickers[self.sticker].T.r
+                --G.shared_stickers[self.sticker].T.r = G.shared_stickers[self.sticker].T.r + math.pi
+                --G.shared_stickers[self.sticker].role.draw_major = self
+                G.shared_stickers[self.sticker]:draw_shader('dissolve', nil, nil, nil, self.children.center, nil, math.pi)
+                G.shared_stickers[self.sticker]:draw_shader('voucher', nil, self.ARGS.send_to_shader, nil, self.children.center, nil, math.pi)
+                --G.shared_stickers[self.sticker].T.r = original_sticker_rotation
+            elseif (self.sticker_run and G.shared_stickers[self.sticker_run]) and G.SETTINGS.run_stake_stickers then
+                local original_sticker_rotation = G.shared_stickers[self.sticker_run].T.r
+                --G.shared_stickers[self.sticker_run].T.r = G.shared_stickers[self.sticker_run].T.r + math.pi
+                --G.shared_stickers[self.sticker_run].role.draw_major = self
+                G.shared_stickers[self.sticker_run]:draw_shader('dissolve', nil, nil, nil, self.children.center, nil, math.pi)
+                G.shared_stickers[self.sticker_run]:draw_shader('voucher', nil, self.ARGS.send_to_shader, nil, self.children.center, nil, math.pi)
+                --G.shared_stickers[self.sticker_run].T.r = original_sticker_rotation
+            end
+        end
+    end,
+    conditions = { vortex = false, facing = 'front' },
+}
+
 
 SMODS.Joker {
     key = 'spin_to_win',
@@ -1825,7 +1851,8 @@ SMODS.Joker {
                 },
             }
         end
-    end
+    end,
+    reflect_stake_stickers = true,
 }
 
 local function reverse_digits(n)
