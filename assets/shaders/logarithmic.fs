@@ -60,8 +60,8 @@ vec4 effect( vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords 
 
     vec2 original_uv = uv;
 
-    uv.x = logarithmic * uv.x;
     uv.x = log2(uv.x);
+    uv.x = logarithmic + uv.x;
     uv.y = log2(uv.y + 1.0);
 
 

@@ -1172,7 +1172,7 @@ SMODS.Joker {
         G.SHADERS['toum_logarithmic']:send('mouse_screen_pos', {0,0})
         G.SHADERS['toum_logarithmic']:send('hovering', 0)
         G.SHADERS['toum_logarithmic']:send("shadow", false)
-        G.SHADERS['toum_logarithmic']:send("logarithmic", G.TIMERS.REAL)
+        G.SHADERS['toum_logarithmic']:send("logarithmic", G.TIMERS.REAL * 0.03)
         love.graphics.setShader( G.SHADERS['toum_logarithmic'])
         --love.graphics.setShader()
         card.children.center:set_sprite_pos(card.children.center.sprite_pos)
