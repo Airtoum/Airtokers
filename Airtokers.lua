@@ -1586,7 +1586,8 @@ function Card:calculate_joker(context, a2, a3, a4, a5, a6, a7, a8, a9) -- any ex
     --- for scrapbook
     if return_value then
         local shallow_copy = shallow_copy_table(return_value)
-        self.toum_most_recent_trigger = shallow_copy_table(return_value)
+        local pruned_copy = copy_table_but_not_these_classes(shallow_copy, {Object})
+        self.ability.toum_most_recent_trigger = remove_all_properties_of_type_recursively(pruned_copy, 'function')
     end
     return return_value
 end
@@ -1599,7 +1600,7 @@ function copy_table_but_not_these_classes(O, classes)
         if O.is then
             for i, class in ipairs(classes) do
                 if O:is(class) then
-                    print('found a thing! set nil for a ' .. class)
+                    print('found a thing! set nil for a ' .. tostring(class))
                     return nil
                 end
             end
@@ -1620,6 +1621,14 @@ function copy_table_but_not_these_classes(O, classes)
         copy = O
     end
     return copy
+end
+
+local original_card_sell_card = Card.sell_card
+function Card:sell_card(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+    local return_value = original_card_sell_card(self, a1, a2, a3, a4, a5, a6, a7, a8, a9)
+    G.GAME.toum_last_sold_last_triggered_effect = self.ability.toum_most_recent_trigger and
+        remove_all_properties_of_type_recursively(copy_table_but_not_these_classes(self.ability.toum_most_recent_trigger, {Object}), 'function')
+    return return_value
 end
 
 
@@ -1644,14 +1653,19 @@ SMODS.Joker {
     atlas = "Airtokers",
     pos = {x = 3, y = 1},
     cost = 2,
+    set_ability = function(self, card, initial, delay_sprites)
+        assert(card.ability)
+        assert(card.ability.extra)
+        card.ability.extra.remembered_effect = G.GAME.toum_last_sold_last_triggered_effect
+    end,
     calculate = function(self, card, context)
-        if context.selling_card and context.card.toum_most_recent_trigger then
+        if context.selling_card and context.card.ability.toum_most_recent_trigger then
             local dangerous_classes = {
                 Object, 
                 Card, CardArea, Tag, Blind, Game, Controller, Event, EventManager, Node, Moveable,
                 Card_Character, Particles, Sprite, DynaText, UIBox, UIElement, AnimatedSprite,
             }
-            local effect_to_paste = copy_table_but_not_these_classes(context.card.toum_most_recent_trigger, {Object})
+            local effect_to_paste = copy_table_but_not_these_classes(context.card.ability.toum_most_recent_trigger, {Object})
             card.ability.extra.remembered_effect = remove_all_properties_of_type_recursively(effect_to_paste, 'function')
         end
         if context.joker_main then
