@@ -1,0 +1,30 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = -10
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "after"
+match_indent = false
+pattern = '''
+    G.GAME.hands[text].played = G.GAME.hands[text].played + 1
+'''
+payload = '''
+    G.GAME.hands[text].played = G.GAME.hands[text].played - 1                  		 -- Airtokers! // >⏝o )\
+    G.GAME.hands[text].played = G.GAME.hands[text].played + (G.GAME.penis or 1)                  		 -- Airtokers! // >⏝o )\
+'''
+
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "after"
+match_indent = false
+pattern = '''
+    G.GAME.hands[text].played_this_round = G.GAME.hands[text].played_this_round + 1
+'''
+payload = '''
+    G.GAME.hands[text].played_this_round = G.GAME.hands[text].played_this_round - 1                  		 -- Airtokers! // >⏝o )\
+    G.GAME.hands[text].played_this_round = G.GAME.hands[text].played_this_round + (G.GAME.penis or 1)                  		 -- Airtokers! // >⏝o )\
+'''

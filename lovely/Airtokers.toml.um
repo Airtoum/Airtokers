@@ -395,11 +395,11 @@ payload = '''for k, card in ipairs(self.cards) do
 
 # Make DynaText with a table possible for loc_vars
 [[patches]]
-[patches.pattern]
+[patches.regex]
 target = "functions/misc_functions.lua"
 position = "before"
 match_indent = false
-pattern = "local desc_scale = G.LANG.font.DESCSCALE"
+pattern = "local desc_scale = .+DESCSCALE"
 payload = '''
 -- pass to vars table with 'ref_table' and 'ref_value' keys. referenced by index in vars
 if part.control.D then 
@@ -418,11 +418,11 @@ payload = "local skip_this_line = false"
 
 # Make DynaText with a table possible for loc_vars
 [[patches]]
-[patches.pattern]
+[patches.regex]
 target = "functions/misc_functions.lua"
 position = "before"
 match_indent = false
-pattern = "local desc_scale = G.LANG.font.DESCSCALE"
+pattern = "local desc_scale = .+DESCSCALE"
 payload = '''
 -- pass to vars table with a boolean to skip adding this line. referenced by index in vars
 if part.control.O then  -- O for "Omit if"
@@ -692,30 +692,6 @@ payload = '''
     if G.GAME.penis then
         create_UIBox_Penis()
     end
-'''
-
-[[patches]]
-[patches.pattern]
-target = "functions/state_events.lua"
-position = "at"
-match_indent = false
-pattern = '''
-    G.GAME.hands[text].played = G.GAME.hands[text].played + 1
-'''
-payload = '''
-    G.GAME.hands[text].played = G.GAME.hands[text].played + (G.GAME.penis or 1)
-'''
-
-[[patches]]
-[patches.pattern]
-target = "functions/state_events.lua"
-position = "at"
-match_indent = false
-pattern = '''
-    G.GAME.hands[text].played_this_round = G.GAME.hands[text].played_this_round + 1
-'''
-payload = '''
-    G.GAME.hands[text].played_this_round = G.GAME.hands[text].played_this_round + (G.GAME.penis or 1)
 '''
 
 #[[patches]]
