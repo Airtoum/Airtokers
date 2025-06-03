@@ -62,7 +62,8 @@ payload = "SMODS.calculate_main_scoring({cardarea = v, full_hand = G.play.cards,
 target = '''=[SMODS _ "src/utils.lua"]'''
 position = "before"
 match_indent = false
-pattern = "if in_scoring then context.cardarea = G.play else context.cardarea = 'unscored' end"
+pattern = '''if scoring_hand then
+                if in_scoring then context.cardarea = G.play else context.cardarea = 'unscored' end'''
 payload = "local true_cardarea = context.cardarea"
 
 [[patches]]
@@ -72,6 +73,14 @@ position = "after"
 match_indent = false
 pattern = "if in_scoring then context.cardarea = G.play else context.cardarea = 'unscored' end"
 payload = "if true_cardarea == G.deck and not in_scoring then context.cardarea = 'undrawn' end"
+
+[[patches]]
+[patches.pattern]
+target = '''=[SMODS _ "src/utils.lua"]'''
+position = "after"
+match_indent = false
+pattern = "SMODS.score_card(card, context)"
+payload = "context.cardarea = true_cardarea"
 
 ## 
 ##[[patches]]
