@@ -922,9 +922,11 @@ SMODS.Joker {
             "time you read this",
         },
     },
-    config = { extra = { mult = number(17), mult_gain = number(-3) * 1 }},
+    config = { extra = { mult = number(17), mult_gain = number(-3) * 1, mult_min = number(-200), mult_max = number(200) }},
     loc_vars = function(self, info_queue, card)
         card.ability.extra.mult = card.ability.extra.mult + card.ability.extra.mult_gain
+        card.ability.extra.mult = math.max(card.ability.extra.mult, card.ability.extra.mult_min)
+        card.ability.extra.mult = math.min(card.ability.extra.mult, card.ability.extra.mult_max)
         return { vars = {
             card.ability.extra.mult,
             card.ability.extra.mult_gain * -1,
