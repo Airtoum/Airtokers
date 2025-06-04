@@ -17,6 +17,9 @@ local function primitive_math_sign(n)
 end
 
 local function number(n)
+    if Airtokers.is_big(n) then
+        return n
+    end
     if to_big and Big then
         local return_n
         if Big.array and type(n) == 'number' then 
@@ -53,6 +56,10 @@ local function is_big(x)
 end
 Airtokers.is_big = is_big
 
+local function is_talisman_bignumber(x)
+    return (type(x) == 'table') and (x.e and x.m)
+end
+
 local function are_both_big(a, b)
     return is_big(a) and is_big(b)
 end
@@ -71,6 +78,8 @@ local function number_equal(a, b)
     return a == b
 end
 Airtokers.number_equal = number_equal
+
+assert(number_equal(number(1600), number(1600)))
 
 local function is_zero(a)
     return number_equal(a, number(0))
@@ -153,6 +162,7 @@ local function number_less_than_or_equal(a, b)
     return a <= b
 end
 
+-- don't worry! this is not a ceiling function!
 local function number_round_towards_positive_infinity(a)
     if is_big(a) then
         if a.floor then return (a - number(0.5)):floor() + number(1) end
@@ -167,6 +177,42 @@ local function number_abs(a)
     else
         return a * number(-1)
     end
+end
+
+-- bignum does not implement this correctly, it copies the omeganum implementation without any changes
+local function number_mod(a, b)
+    if is_talisman_bignumber(a) and is_talisman_bignumber(b) then
+        return a:sub(a:div(b):floor():mul(b))
+    end
+    if is_talisman_bignumber(a) then
+        return a:sub(a:div(number(b)):floor():mul(number(b)))
+    end
+    if is_talisman_bignumber(b) then
+        return number(a):sub(number(a):div(b):floor():mul(b))
+    end
+    return a % b
+end
+
+if true then
+    local result = number_mod(number(5040*6), number(7*7))
+    local expected = number(7)
+    result = result - 0.0001
+    result = number_round_towards_positive_infinity(result)
+    assert(number_equal(result, expected), tostring(result) .. ' did not equal '..tostring(expected) )
+
+    assert(number_less_than(number_mod(number(120000), number(2)), number(2)))
+    --assert(number_equal(number_mod(number(120000), number(2)), number(0)))
+end
+
+local function number_equal_with_tolerance(a, b, tolerance)
+    return number_less_than(number_abs(a - b), tolerance)
+end
+
+local function num_to_str_full(n)
+    if is_big(n) then
+        return string.format("%18.18f", to_number(n))
+    end
+    return string.format("%18.18f", n)
 end
 
 local function velocitize(n, naked_zero)
@@ -1857,23 +1903,51 @@ SMODS.Joker {
     reflect_stake_stickers = true,
 }
 
+
+
 local function reverse_digits(n)
     local chips_string = tostring(n)
-        local digit_groups = {}
-        for digit_group in string.gfind(chips_string, '%d+') do
-            digit_groups[digit_group] = true
+    chips_string = string.gsub(chips_string, ',', '')
+    local digit_groups = {}
+    for digit_group in string.gfind(chips_string, '[%d.]+') do
+        digit_groups[digit_group] = true
+    end
+    for digit_group, v in pairs(digit_groups) do
+        local decimal_index = string.find(digit_group, '%.')
+        local reversed_digit_group = string.reverse(string.gsub(digit_group, '%.', ''))
+        if decimal_index then
+            reversed_digit_group = string.sub(reversed_digit_group, 1, decimal_index - 1) .. '.' .. string.sub(reversed_digit_group, decimal_index, #reversed_digit_group)
         end
-        for digit_group, v in pairs(digit_groups) do
-            local reversed_digit_group = string.reverse(digit_group)
-            digit_groups[digit_group] = reversed_digit_group
-            chips_string = string.gsub(chips_string, digit_group, reversed_digit_group, 1)
-        end
-        local chips_number = number(chips_string)
-        return (chips_number)
+        digit_groups[digit_group] = reversed_digit_group
+        chips_string = string.gsub(chips_string, digit_group, reversed_digit_group, 1)
+    end
+    local chips_number = number(chips_string)
+    return (chips_number)
 end
 
---assert(number_equal(reverse_digits(number(1234567)), number(7654321)))
---assert(number_equal(reverse_digits(number(123.4567)), number(765.4321)))
+local assert_equal = function(a, b, comparison, comparison_name)
+    if comparison and comparison(a, b) then
+        return
+    end
+    if (a == b) then
+        return
+    else
+        error((
+            'Assertion failed: '..
+            'Expected '.. type(a).. ' ' .. tostring(a) .. ' to equal ' .. type(b) .. ' ' .. tostring(b) .. ' ' ..
+            '(compared with '..(comparison and (comparison_name or 'a custom function') or '==')..') ' .. 
+            num_to_str_full(a) .. ' vs ' .. num_to_str_full(b)
+        ), 2)
+    end
+end
+
+local assert_number_equal = function (a,b) return assert_equal(a, b, number_equal, 'number_equal') end
+local assert_equal_with_tolerance = function (a,b,tolerance) return assert_equal(a, b, function(a,b) return number_equal_with_tolerance(a, b, tolerance) end, 'number_equal_with_tolerance('..tolerance..')') end
+
+assert_equal(reverse_digits(number(1234567)), number(7654321))
+assert_equal(reverse_digits(number(1.23)), number(3.21))
+assert_equal(reverse_digits(number(1.6e87)), number(6.1e78))
+assert_equal(reverse_digits(number(-1234567)), number(-7654321))
 
 Airtokers.custom_effects.digit_reverse_chips = {
     core = function(amount)
@@ -1957,7 +2031,7 @@ local function factorial(x)
         --print('base case -1', x)
         return number(nan) 
     end
-    if number_greater_than(x, number(-1)) and number_less_than(x, number(150)) and ((type(x) == 'number' and math.floor(x) == x) or (type(x) == 'table' and (x.isint and x:isint()) or (x.floor and number_equal(x:floor(), x))) or number_equal(x % number(1), number(0))) then
+    if number_greater_than(x, number(-1)) and number_less_than(x, number(150)) and (((type(x) == 'number') and math.floor(x) == x) or ((type(x) == 'table') and (x.isint and x:isint()) or (x.floor and number_equal(x:floor(), x))) or number_equal(number_mod(x, number(1)), number(0))) then
         --print('definition', x)
         -- for integers, use definition
         local acc = number(1)
@@ -1988,6 +2062,9 @@ local function factorial(x)
         end
         return (number(1) / (x + number(1))) * x_plus_one_factorial
     else
+        if number_not_equal(number_round_towards_positive_infinity(x), x) then
+            return number(0)
+        end
         --print('base case very negative', x)
         return number(nan) -- likely an asymptote
     end
@@ -2006,13 +2083,20 @@ Airtokers.custom_effects.factorial_chips = {
     ['config.scale'] = 0.7,
 }
 
--- factorial chips test
---[[
-for i = -100, 200 do 
-    local i_over_10 = i/10
-    print(tostring(i_over_10)..'!', factorial(number(i_over_10)))
-end
---]]
+assert_equal(factorial(number(0)), number(1))
+assert_equal(factorial(number(1)), number(1))
+assert_equal(factorial(number(2)), number(2))
+assert_equal(factorial(number(3)), number(6))
+assert_equal_with_tolerance(factorial(number(4)), number(24), 0.00001)
+assert_equal_with_tolerance(factorial(number(5)), number(120), 0.00001)
+assert_equal_with_tolerance(factorial(number(50)), number(3.0414093e+64), 3.0414093e+58)
+assert_equal_with_tolerance(factorial(number(0.5)), number(0.88622692545), 0.1)
+assert_equal_with_tolerance(factorial(number(-0.5)), number(0.88622692545 / 0.5), 0.1)
+assert_equal_with_tolerance(factorial(number(-1.5)), number(0.88622692545 / 0.5 / -0.5), 0.2)
+assert_equal_with_tolerance(factorial(number(-2.5)), number(0.88622692545 / 0.5 / -0.5 / -1.5), 0.3)
+assert_equal_with_tolerance(factorial(number(-20.5)), number(0), 0.00001)
+assert_equal(factorial(number(-40.5)), number(0))
+assert(number_not_equal(factorial(number(-70)), factorial(number(-70)))) -- nan
 
 Airtokers.custom_effects.rad_2_deg_chips = {
     core = function(amount)
@@ -2094,22 +2178,34 @@ Airtokers.custom_effects.sign_chips = {
     ['config.scale'] = 0.7,
 }
 
+local function increase_digits(n)
+    local chips_string = tostring(n)
+    chips_string = string.gsub(chips_string, ',', '')
+    chips_string = string.gsub(chips_string, '9', '<special token>')
+    chips_string = string.gsub(chips_string, '8', '9')
+    chips_string = string.gsub(chips_string, '7', '8')
+    chips_string = string.gsub(chips_string, '6', '7')
+    chips_string = string.gsub(chips_string, '5', '6')
+    chips_string = string.gsub(chips_string, '4', '5')
+    chips_string = string.gsub(chips_string, '3', '4')
+    chips_string = string.gsub(chips_string, '2', '3')
+    chips_string = string.gsub(chips_string, '1', '2')
+    chips_string = string.gsub(chips_string, '0', '1')
+    chips_string = string.gsub(chips_string, '<special token>', '10') -- hmm
+    local chips_number = number(chips_string)
+    return chips_number
+end
+
+assert_equal(increase_digits(number(10000)), number(21111))
+assert_equal(increase_digits(number(6789)), number(78910))
+assert_equal(increase_digits(number(99999)), number(1010101010))
+assert_equal(increase_digits(number(-590)), number(-6101))
+assert_equal(increase_digits(number(1.9)), number(2.10))
+assert_equal(increase_digits(number(5.4e19)), number(6.5e210)) -- good lord
+
 Airtokers.custom_effects.increase_digits_chips = {
     core = function(amount)
-        local chips_string = tostring(hand_chips)
-        chips_string = string.gsub(chips_string, '9', '<special token>')
-        chips_string = string.gsub(chips_string, '8', '9')
-        chips_string = string.gsub(chips_string, '7', '8')
-        chips_string = string.gsub(chips_string, '6', '7')
-        chips_string = string.gsub(chips_string, '5', '6')
-        chips_string = string.gsub(chips_string, '4', '5')
-        chips_string = string.gsub(chips_string, '3', '4')
-        chips_string = string.gsub(chips_string, '2', '3')
-        chips_string = string.gsub(chips_string, '1', '2')
-        chips_string = string.gsub(chips_string, '0', '1')
-        chips_string = string.gsub(chips_string, '<special token>', '10') -- hmm
-        local chips_number = number(chips_string)
-        hand_chips = mod_chips(chips_number)
+        hand_chips = mod_chips(increase_digits(hand_chips))
     end,
     mult = false,
     chips = true,
@@ -2149,7 +2245,9 @@ local function is_prime(n)
     local limit = (n ^ 0.5)
     local i = number(2)
     while number_less_than(i, limit) do
-        if (n % number(i)) then 
+        if number_equal_with_tolerance(number_mod(n, number(i)), number(0), 0.000001) or
+           number_equal_with_tolerance(number_mod(n + number(0.000001), number(i)), number(0), 0.000001)
+        then 
             return false
         end
         i = i + number(1)
@@ -2157,14 +2255,25 @@ local function is_prime(n)
     return true
 end
 
+assert(is_prime(number(5)))
+assert(is_prime(number(101)))
+assert(is_prime(number(1979339339)))
+assert(not is_prime(number(102221243011))) -- too big
+assert(not is_prime(number(6)))
+assert(not is_prime(number(60000000)))
+assert(not is_prime(number(60000000000000000000000000000000000000)))
+
 local function get_prime_factorization(n)
     n = math.abs(n)
     local prime_factorization =  {}
     local prime_index = 1
     local last_prime_index = #primes_up_to_1000000
     while number_greater_than(n, number(1)) and prime_index <= last_prime_index do
-        while number_equal(n % number(primes_up_to_1000000[prime_index]), number(0)) do
+        while number_equal_with_tolerance(number_mod(n, number(primes_up_to_1000000[prime_index])), number(0), 0.000001) or
+              number_equal_with_tolerance(number_mod(n + number(0.0000005), number(primes_up_to_1000000[prime_index])), number(0), 0.000001)
+        do
             n = n / number(primes_up_to_1000000[prime_index])
+            n = number_round_towards_positive_infinity(n)
             prime_factorization[primes_up_to_1000000[prime_index]] = (prime_factorization[primes_up_to_1000000[prime_index]] or 0) + 1
         end
         prime_index = prime_index + 1
@@ -2172,29 +2281,56 @@ local function get_prime_factorization(n)
     return prime_factorization, n
 end
 
+assert((get_prime_factorization(number(50))[2] == 1))
+assert((get_prime_factorization(number(50))[3] == nil))
+assert((get_prime_factorization(number(50))[4] == nil))
+assert((get_prime_factorization(number(50))[5] == 2))
+
+assert((get_prime_factorization(number(8))[2] == 3))
+assert((get_prime_factorization(number(8))[5] == nil))
+
+assert((get_prime_factorization(number(80000))[2] == 7))
+assert((get_prime_factorization(number(80000))[5] == 4))
+assert((get_prime_factorization(number(120000))[2] == 6))
+assert((get_prime_factorization(number(120000))[3] == 1))
+assert((get_prime_factorization(number(120000))[5] == 4))
+
+
+local eulers_totient_function_debug = function(m, m2) print(m, m2) end
+eulers_totient_function_debug = function(m) end
 local function eulers_totient_function(n)
+    eulers_totient_function_debug('A', n)
     n = number_round_towards_positive_infinity(n)
+    eulers_totient_function_debug('B', n)
     local original_n = n
     local original_sign = number(1)
     if is_negative(n) then
         original_sign = number(-1)
     end
     n = math.abs(n)
+    eulers_totient_function_debug('C', n)
     if (number_greater_than(n, number(100000000))) then
-        return original_n * number(6 / (math.PI ^ 2))
+        eulers_totient_function_debug('D')
+        return original_n * number(6 / (math.pi ^ 2))
     end
     local prime_factorization, n = get_prime_factorization(n)
+    eulers_totient_function_debug('E', type(prime_factorization) == 'table' and inspect(prime_factorization))
+    eulers_totient_function_debug('F', n)
     if number_greater_than(n, number(1)) then
         if is_prime(n) then
             prime_factorization[n] = 1
         else
-            return original_n * number(6 / (math.PI ^ 2))
+            eulers_totient_function_debug('G')
+            return original_n * number(6 / (math.pi ^ 2))
         end
     end
+    eulers_totient_function_debug('H', type(prime_factorization) == 'table' and inspect(prime_factorization))
     local product = number(1)
     for p, m in pairs(prime_factorization) do
         product = product * ((number(p) ^ number(m)) - (number(p) ^ (number(m) - number(1))))
     end
+    eulers_totient_function_debug('I', product)
+    eulers_totient_function_debug('J', original_sign)
     return product * original_sign
 end
 
@@ -2212,9 +2348,11 @@ Airtokers.custom_effects.eulers_totient_function_chips = {
     ['config.scale'] = 0.7,
 }
 
+assert(eulers_totient_function(number(5*5*5*2*2*2*2*3)))
 -- 6000
-assert(number_equal(eulers_totient_function(number(5*5*5*2*2*2*2*3)), number(1600)))
-assert(number_equal(eulers_totient_function(number(-27)), number(-18)))
+--assert(number_equal(eulers_totient_function(number(5*5*5*2*2*2*2*3)), number(1600)))
+assert_equal_with_tolerance(eulers_totient_function(number(5*5*5*2*2*2*2*3)), number(1600), 0.0001)
+assert_equal_with_tolerance(eulers_totient_function(number(-27)), number(-18), 0.0001)
 --print(eulers_totient_function(number(-27))) -- -18
 
 -- shoutout to https://math.stackexchange.com/questions/1363950/average-lcma-b-1-le-a-le-b-le-n-and-asymptotic-behavior
@@ -2287,10 +2425,10 @@ local function least_common_multiple(a, b)
     return product / multiplied_by
 end
 
-assert(number_equal(least_common_multiple(number(2*2*2), number(2*2*3)), number(2*2*2*3)))
-assert(number_equal(least_common_multiple(number(-6), number(-8)), number(-24)))
-assert(number_equal(least_common_multiple(number(0.9), number(1.15)), number(20.7)))
-assert(number_equal(least_common_multiple(number(0), number(0)), number(0)))
+assert_equal_with_tolerance(least_common_multiple(number(2*2*2), number(2*2*3)), number(2*2*2*3), 0.000001)
+assert_equal_with_tolerance(least_common_multiple(number(-6), number(-8)), number(-24), 0.000001)
+assert_equal_with_tolerance(least_common_multiple(number(0.9), number(1.15)), number(20.7), 0.000001)
+assert_equal_with_tolerance(least_common_multiple(number(0), number(0)), number(0), 0.000001)
 
 Airtokers.custom_effects.lcm_mult = {
     core = function(amount)
@@ -3142,13 +3280,7 @@ local function convert_to_nonary(n)
     return chips_number
 end
 
-local assert_equal = function(a, b)
-    if (a == b) then
-        return
-    else
-        error('Assertion failed: Expected '.. type(a).. ' ' .. tostring(a) .. ' to equal ' .. type(b) .. ' ' .. tostring(b), 2)
-    end
-end
+
 
 assert_equal(convert_to_nonary(0.5), number(0.44444444))
 assert_equal(convert_to_nonary(1/3), number(0.3))
@@ -3275,14 +3407,14 @@ local function sum_of_factors(n)
 end
 
 --print(sum_of_factors(12))
-assert(number_equal(sum_of_factors(12), number(28)))
-assert(number_equal(sum_of_factors(5), number(6)))
-assert(number_equal(sum_of_factors(30), number(72)))
+assert_equal_with_tolerance(sum_of_factors(12), number(28), 0.000001)
+assert_equal_with_tolerance(sum_of_factors(5), number(6), 0.000001)
+assert_equal_with_tolerance(sum_of_factors(30), number(72), 0.000001)
 --print(sum_of_factors(-40))
-assert(number_equal(sum_of_factors(-40), number(-90))) -- 2,2,2,5 = 15 * 6
-assert(number_equal(sum_of_factors(1), number(1)))
-assert(number_equal(sum_of_factors(-1), number(-1)))
-assert(number_equal(sum_of_factors(0), number(0)))
+assert_equal_with_tolerance(sum_of_factors(-40), number(-90), 0.000001) -- 2,2,2,5 = 15 * 6
+assert_equal_with_tolerance(sum_of_factors(1), number(1), 0.000001)
+assert_equal_with_tolerance(sum_of_factors(-1), number(-1), 0.000001)
+assert_equal_with_tolerance(sum_of_factors(0), number(0), 0.000001)
 
 Airtokers.custom_effects.sum_of_factors_chips = {
     core = function(amount)
