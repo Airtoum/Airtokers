@@ -736,3 +736,36 @@ payload = '''
         )           		 -- Airtokers! // >⏝o )\
 '''
 
+## retriggered jokers should retrigger their editions, too
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "at"
+match_indent = false
+pattern = '''
+local rt_eval, rt_post = eval_card(_card, {cardarea = G.jokers, full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, joker_main = true, retrigger_joker = true})
+table.insert(effects, {retriggers = joker_eval.retriggers[rt]})
+table.insert(effects, rt_eval)
+for _, v in ipairs(rt_post) do effects[#effects+1] = v end
+'''
+payload = '''
+local eval = eval_card(_card, {cardarea = G.jokers, full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, edition = true, post_joker = true})          		 -- Airtokers! // >⏝o )\
+if eval.edition then effects[#effects+1] = eval end         		 -- Airtokers! // >⏝o )\
+local rt_eval, rt_post = eval_card(_card, {cardarea = G.jokers, full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, joker_main = true, retrigger_joker = true})          		 -- Airtokers! // >⏝o )\
+table.insert(effects, {retriggers = joker_eval.retriggers[rt]})                 		 -- Airtokers! // >⏝o )\
+local eval = eval_card(_card, {cardarea = G.jokers, full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, edition = true, pre_joker = true})           		 -- Airtokers! // >⏝o )\
+if eval.edition then effects[#effects+1] = eval end         		 -- Airtokers! // >⏝o )\
+table.insert(effects, rt_eval)          		 -- Airtokers! // >⏝o )\
+for _, v in ipairs(rt_post) do effects[#effects+1] = v end  		 -- Airtokers! // >⏝o )\
+'''
+
+## retriggered jokers should retrigger their editions, too, even if they didn't trigger for scoring 
+[[patches]]
+[patches.pattern]
+target = "functions/common_events.lua"
+position = "after"
+match_indent = false
+pattern = "local jokers, triggered = card:calculate_joker(context)"
+payload = '''
+triggered = triggered or context.joker_main and not context.retrigger_joker and card.edition and (card.edition.foil or card.edition.holo or card.edition.polychrome)                		 -- Airtokers! // >⏝o )\
+'''

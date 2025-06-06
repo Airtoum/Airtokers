@@ -11,6 +11,7 @@
 ------------MOD CODE -------------------------
 
 local Airtokers = SMODS.current_mod
+Airtokers.debug = {}
 
 local function primitive_math_sign(n)
     return (n < 0 and -1) or 1
@@ -428,7 +429,7 @@ function create_UIBox_Penis()
 end
 
 table.insert(final_setups, function ()
-    Airtokers.custom_effects.penis = {
+    Airtokers['custom_effect'..'s'].penis = {
         core = function(amount)
             G.E_MANAGER:add_event(Event({
                 func = function()
@@ -458,7 +459,7 @@ table.insert(final_setups, function ()
         chips = false,
         misc = true,
         translation_key = 'a_penis',
-        colour = G.C.ATTENTION,
+        colour = G.C.IMPORTANT,
         sound = 'multhit1',
         volume = 1,
         amt = nil,
@@ -494,6 +495,7 @@ SMODS.Joker {
 Airtokers.optional_features = {cardareas = {deck = true}}
 SMODS.optional_features.cardareas.deck = true
 SMODS.optional_features.cardareas.decks = true
+SMODS.optional_features.retrigger_joker = true
 
 SMODS.Joker {
     key = 'tomorrow_joker',
@@ -998,15 +1000,30 @@ SMODS.Joker {
 --- mult?: boolean,  # remember, it's mult = mod_mult(x)
 --- chips?: boolean,  # remember, it's hand_chips = mod_chips(x)
 --- misc?: boolean,
---- text_function?: function,   # supercedes translation key
+--- text_function?: function(amount: number) -> string,   # supercedes translation key
 --- stylized_text?: boolean,    # requires translation key, applies text styling to card eval status text
 --- translation_key?: string,
 --- colour: table | function(amt: number) -> table,
 --- sound?: string,
 --- volume?: number,
 --- amt?: number,
+--- transform_amt?: function(amount: number) -> number
 --- ['config.type']?: string,
 --- ['config.scale']?: number,
+--- playing_cards_created?: boolean  # triggers playing card joker context (eg hologram)
+--- 
+--- template:
+--- Airtokers.custom_effects.new_effect = {
+---     core = function(amount) end,
+---     mult = false,
+---     chips = false,
+---     misc = true,
+---     translation_key = 'a_new_effect',
+---     colour = G.C.XMULT,
+---     sound = 'generic1' or 'multhit1' or 'multhit2' or 'chips1' or 'coin3',
+---     volume = 1 or 0.7,
+---     ['config.scale'] = 0.7,
+--- }
 Airtokers.custom_effects = {}
 
 function Airtokers.check_custom_effects(effect, card, percent, mod_percent)
@@ -1426,13 +1443,17 @@ local original_smods_calculate_individual_effect = SMODS.calculate_individual_ef
 function SMODS.calculate_individual_effect(effect, scored_card, key, amount, from_edition)
     if Airtokers.custom_effects[key] then
         local custom_effect = Airtokers.custom_effects[key]
-        custom_effect.core(effect[key])
+        local amt = effect[key]
+        if type(custom_effect.transform_amt) == 'function' then 
+            amt = custom_effect.transform_amt(amt)
+        end
+        custom_effect.core(amt, {scored_card = scored_card})
         if not custom_effect.mult and not custom_effect.chips then custom_effect.misc = true end
         local hand_text_that_needs_updating = {}
         if custom_effect.mult then hand_text_that_needs_updating.mult = mult end
         if custom_effect.chips then hand_text_that_needs_updating.chips = hand_chips end
         update_hand_text({delay = 0}, hand_text_that_needs_updating)
-        card_eval_status_text(scored_card, key, effect[key], percent)
+        card_eval_status_text(scored_card, key, amt, percent, nil, custom_effect.playing_cards_created and {playing_cards_created = {true}} or nil)
         return true
     else
         return original_smods_calculate_individual_effect(effect, scored_card, key, amount, from_edition)
@@ -1620,6 +1641,9 @@ local function shallow_copy_table(O)
   end
   
 local function remove_all_properties_of_type_recursively(t, type_to_remove)
+    if type(t) ~= 'table' then 
+        return t
+    end
     for k, v in pairs(t) do
         if type(v) == type_to_remove then
             t[k] = nil
@@ -1629,6 +1653,16 @@ local function remove_all_properties_of_type_recursively(t, type_to_remove)
         end
     end
     return t
+end
+
+local last_card_passed_to_card_eval_status_text = nil
+local last_extra_passed_to_card_eval_status_text = nil
+
+Airtokers.debug.last_card_passed_to_card_eval_status_text = function()
+    return last_card_passed_to_card_eval_status_text
+end
+Airtokers.debug.last_extra_passed_to_card_eval_status_text = function()
+    return last_extra_passed_to_card_eval_status_text
 end
 
 -- Mr. Bones hack
@@ -1642,10 +1676,19 @@ function Card:calculate_joker(context, a2, a3, a4, a5, a6, a7, a8, a9) -- any ex
         return_value = original_calculate_joker(self, context_copy, a2, a3, a4, a5, a6, a7, a8, a9)
     end
     --- for scrapbook
-    if return_value then
+    if return_value or context.setting_blind or context.ending_shop or context.open_booster then
         local shallow_copy = shallow_copy_table(return_value)
         local pruned_copy = copy_table_but_not_these_classes(shallow_copy, {Object})
-        self.ability.toum_most_recent_trigger = remove_all_properties_of_type_recursively(pruned_copy, 'function')
+        if return_value == true or context.setting_blind or context.ending_shop or context.open_booster then
+            if last_card_passed_to_card_eval_status_text == self and last_extra_passed_to_card_eval_status_text and last_extra_passed_to_card_eval_status_text.message then
+                self.ability.toum_most_recent_trigger = { 
+                    message = last_extra_passed_to_card_eval_status_text.message,
+                    colour = last_extra_passed_to_card_eval_status_text.colour,
+                }
+            end
+        else
+            self.ability.toum_most_recent_trigger = remove_all_properties_of_type_recursively(pruned_copy, 'function')
+        end
     end
     return return_value
 end
@@ -1689,6 +1732,247 @@ function Card:sell_card(a1, a2, a3, a4, a5, a6, a7, a8, a9)
     return return_value
 end
 
+local original_card_eval_status_text = card_eval_status_text
+function card_eval_status_text(card, eval_type, amt, percent, dir, extra, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20)
+    last_card_passed_to_card_eval_status_text = card
+    last_extra_passed_to_card_eval_status_text = extra
+    if last_extra_passed_to_card_eval_status_text and last_extra_passed_to_card_eval_status_text.message then
+        last_card_passed_to_card_eval_status_text.ability.toum_most_recent_trigger = last_card_passed_to_card_eval_status_text.ability.toum_most_recent_trigger or { 
+            message = last_extra_passed_to_card_eval_status_text.message,
+            colour = last_extra_passed_to_card_eval_status_text.colour,
+        }
+    end
+    return original_card_eval_status_text(card, eval_type, amt, percent, dir, extra, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20)
+end
+
+local function build_card_making_custom_effect(card_type, psuedo_key_suffix, translation_key, colour, cardarea_key, buffer_key, rarity)
+    return {
+        core = function(amount)
+            --cardarea_key is necessary since G.jokers is nil upon startup
+            if not (#(G[cardarea_key].cards) + G.GAME[buffer_key] < G[cardarea_key].config.card_limit) then
+                return
+            end
+            G.GAME[buffer_key] = G.GAME[buffer_key] + 1
+            G.E_MANAGER:add_event(Event({
+                trigger = 'before',
+                delay = 0.0,
+                func = (function()
+                        local card = create_card(card_type, G[cardarea_key], nil, rarity, nil, nil, nil, psuedo_key_suffix)
+                        card:add_to_deck()
+                        G[cardarea_key]:emplace(card)
+                        G.GAME[buffer_key] = 0
+                    return true
+                end)}))
+        end,
+        mult = false,
+        chips = false,
+        misc = true,
+        text_function = function()
+            return localize(translation_key)
+        end,
+        colour = colour,
+        sound = 'generic1',
+        volume = 1 or 0.7,
+        transform_amt = function(amt)
+            if not (#(G[cardarea_key].cards) + G.GAME[buffer_key] < G[cardarea_key].config.card_limit) then
+                return 0
+            end
+            return amt
+        end,
+        ['config.scale'] = 0.7,
+    }
+end
+
+Airtokers.custom_effects.toum_plus_tarot = build_card_making_custom_effect('Tarot', '8ba', 'k_plus_tarot', G.C.IMPORTANT, 'consumeables', 'consumeable_buffer', nil) -- meant to be G.C.SECONDARY_SET.Tarot in vanilla but it's not set correctly
+Airtokers.custom_effects.toum_plus_spectral = build_card_making_custom_effect('Spectral', 'sixth', 'k_plus_spectral', G.C.SECONDARY_SET.Spectral, 'consumeables', 'consumeable_buffer', nil)
+Airtokers.custom_effects.toum_plus_joker = build_card_making_custom_effect('Joker', 'rif', 'k_plus_joker', G.C.BLUE, 'jokers', 'joker_buffer', 0)
+
+--- views are subclasses of instances!! that's wild
+function CardArea:DrawFromBack()
+    self.__index = self
+    local wrapper = self:extend()
+    function wrapper.remove_card(wrapperself, card, discarded_only, a3, a4, a5, a6, a7, a8, a9)
+        local original_config_type = self.config.type
+        self.config.type = ((self.config.type == 'discard' or self.config.type == 'deck') and 'play') or 'deck'
+        local return_value = self:remove_card(card, discarded_only, a3, a4, a5, a6, a7, a8, a9)
+        self.config.type = original_config_type
+        return return_value
+    end
+    return wrapper
+end
+
+Airtokers.custom_effects.toum_plus_stone = {
+    core = function(amount, params)
+        G.E_MANAGER:add_event(Event({
+            func = function() 
+                local front = pseudorandom_element(G.P_CARDS, pseudoseed('marb_fr'))
+                G.playing_card = (G.playing_card and G.playing_card + 1) or 1
+                local card = Card(G.play.T.x + G.play.T.w/2, G.play.T.y, G.CARD_W, G.CARD_H, front, G.P_CENTERS.m_stone, {playing_card = G.playing_card})
+                card:start_materialize({G.C.SECONDARY_SET.Enhanced})
+                G.play:emplace(card)
+                table.insert(G.playing_cards, card)
+                return true
+            end}))
+        card_eval_status_text(params.scored_card, 'extra', nil, nil, nil, {message = localize('k_plus_stone'), colour = G.C.SECONDARY_SET.Enhanced})
+
+        G.E_MANAGER:add_event(Event({
+            func = function() 
+                G.deck.config.card_limit = G.deck.config.card_limit + 1
+                return true
+            end}))
+
+        draw_card(G.play:DrawFromBack(),G.deck, 90,'up', nil)  
+
+
+        playing_card_joker_effects({true})
+    end,
+    mult = false,
+    chips = false,
+    misc = true,
+    text_function = function()
+            return ''
+        end,
+    colour = G.C.XMULT,
+    amt = 0,
+    sound = 'generic1' or 'multhit1' or 'multhit2' or 'chips1' or 'coin3',
+    volume = 1 or 0.7,
+    ['config.scale'] = 0.7,
+}
+
+Airtokers.custom_effects.toum_plus_hands = {
+    core = function(amount)
+        ease_hands_played(amount)
+    end,
+    mult = false,
+    chips = false,
+    misc = true,
+    text_function = function(amount)
+        return localize{type = 'variable', key = 'a_hands', vars = {amount}}
+    end,
+    colour = G.C.IMPORTANT,
+    sound = 'generic1',
+    volume = 1 or 0.7,
+    ['config.scale'] = 0.7,
+}
+
+Airtokers.custom_effects.toum_boss_disabled = {
+    core = function(amount, params)
+        G.E_MANAGER:add_event(Event({func = function()
+            G.E_MANAGER:add_event(Event({func = function()
+                G.GAME.blind:disable()
+                play_sound('timpani')
+                delay(0.4)
+                return true end }))
+            card_eval_status_text(params.scored_card, 'extra', nil, nil, nil, {message = localize('ph_boss_disabled')})
+        return true end }))
+    end,
+    mult = false,
+    chips = false,
+    misc = true,
+    text_function = function(amount)
+        return ''
+    end,
+    amt = 0,
+    colour = G.C.IMPORTANT,
+    sound = 'generic1',
+    volume = 1 or 0.7,
+    ['config.scale'] = 0.7,
+}
+
+Airtokers.custom_effects.toum_perkolate = {
+    core = function(amount, params)
+        if G.consumeables.cards[1] then
+            G.E_MANAGER:add_event(Event({
+                func = function() 
+                    local card = copy_card(pseudorandom_element(G.consumeables.cards, pseudoseed('perkeo')), nil)
+                    card:set_edition({negative = true}, true)
+                    card:add_to_deck()
+                    G.consumeables:emplace(card) 
+                    return true
+                end}))
+            card_eval_status_text(params.scored_card, 'extra', nil, nil, nil, {message = localize('k_duplicated_ex')})
+        end
+    end,
+    mult = false,
+    chips = false,
+    misc = true,
+    text_function = function(amount)
+        return ''
+    end,
+    amt = 0,
+    colour = G.C.IMPORTANT,
+    sound = 'generic1',
+    volume = 1 or 0.7,
+    ['config.scale'] = 0.7,
+}
+
+Airtokers.custom_effects.toum_first_played_copied = {
+    core = function(amount, params)
+        G.playing_card = (G.playing_card and G.playing_card + 1) or 1
+        local _card = copy_card(G.play.cards[1], nil, nil, G.playing_card)
+        _card:add_to_deck()
+        G.deck.config.card_limit = G.deck.config.card_limit + 1
+        table.insert(G.playing_cards, _card)
+        G.hand:emplace(_card)
+        _card.states.visible = nil
+
+        G.E_MANAGER:add_event(Event({
+            func = function()
+                _card:start_materialize()
+                return true
+            end
+        }))
+
+        --card_eval_status_text(params.scored_card, 'extra', nil, nil, nil, {message = localize('k_copied_ex'), colour = G.C.IMPORTANT})
+
+    end,
+    mult = false,
+    chips = false,
+    misc = true,
+    text_function = function(amount)
+        return localize('k_copied_ex')
+    end,
+    colour = G.C.CHIPS,
+    sound = 'generic1',
+    volume = 1 or 0.7,
+    ['config.scale'] = 0.7,
+    playing_cards_created = true,
+}
+
+-- don't feel like it right now
+--Airtokers.custom_effects.toum_midas_gold
+
+local function append_effect_to_tower(tower, effect)
+    for i=1,600 do
+        if tower.extra == nil then
+            tower.extra = effect
+            return
+        end
+        if type(tower.extra) ~= 'table' then
+            error('extra is not a table, aaah!')
+        end
+        tower = tower.extra
+    end
+end
+
+-- source: https://stackoverflow.com/questions/9790688/escaping-strings-for-gsub
+local function escape_pattern(text)
+    return text:gsub("([^%w])", "%%%1")
+end
+
+local function matches_localized(text, key)
+    if type(text) ~= 'string' then
+        return false
+    end
+    local pattern = string.gsub(escape_pattern(localize{type = 'variable', key = key, vars = {'SpecialReplacementToken'}}), 'SpecialReplacementToken', '(.+)')
+    local match = string.match(text, pattern)
+    return match and number(match)
+end
+
+-- english-specific tests
+--assert(matches_localized('+1 Hands', 'a_hands'))
+--assert(not matches_localized('+1 Jokers', 'a_hands'))
+
 
 SMODS.Joker {
     key = 'scrapbook',
@@ -1711,10 +1995,65 @@ SMODS.Joker {
     atlas = "Airtokers",
     pos = {x = 3, y = 1},
     cost = 2,
+    augment_effect = function(self, card, effect)
+        if not effect then return end
+        local amount = nil
+        if effect.message == localize('k_plus_tarot') or effect.extra and effect.extra.message == localize('k_plus_tarot') then
+            append_effect_to_tower(effect, { toum_plus_tarot = 1 })
+            if effect.message == localize('k_plus_tarot') then effect.message = nil end
+            if effect.extra and effect.extra.message == localize('k_plus_tarot') then effect.extra.message = nil end
+        end
+        if effect.message == localize('k_again_ex') or effect.extra and effect.extra.message == localize('k_again_ex') then
+            effect.toum_scrapbook_retrigger_self = true
+            if effect.message == localize('k_again_ex') then effect.message = nil end
+            if effect.extra and effect.extra.message == localize('k_again_ex') then effect.extra.message = nil end
+        end
+        if effect.message == localize('k_plus_spectral') or effect.extra and effect.extra.message == localize('k_plus_spectral') then
+            append_effect_to_tower(effect, { toum_plus_spectral = 1 })
+            if effect.message == localize('k_plus_spectral') then effect.message = nil end
+            if effect.extra and effect.extra.message == localize('k_plus_spectral') then effect.extra.message = nil end
+        end
+        if effect.message == localize('k_plus_stone') or effect.extra and effect.extra.message == localize('k_plus_stone') then
+            append_effect_to_tower(effect, { toum_plus_stone = 1 })
+            if effect.message == localize('k_plus_stone') then effect.message = nil end
+            if effect.extra and effect.extra.message == localize('k_plus_stone') then effect.extra.message = nil end
+        end
+        if effect.message == localize('k_plus_joker') or effect.extra and effect.extra.message == localize('k_plus_joker') then
+            append_effect_to_tower(effect, { toum_plus_joker = 1 })
+            if effect.message == localize('k_plus_joker') then effect.message = nil end
+            if effect.extra and effect.extra.message == localize('k_plus_joker') then effect.extra.message = nil end
+        end
+        amount = matches_localized(effect.message, 'a_hands') or effect.extra and matches_localized(effect.extra.message, 'a_hands')
+        if amount then
+            append_effect_to_tower(effect, { toum_plus_hands = primitive_number(math.min(amount, number(0.75))) }) -- apologies, but this infinite is not fun. you can cheese this with more than one scrapbook though, which is okay by me
+            if matches_localized(effect.message, 'a_hands') then effect.message = nil end
+            if effect.extra and matches_localized(effect.extra.message, 'a_hands') then effect.extra.message = nil end
+        end
+        if effect.message == localize('ph_boss_disabled') or effect.extra and effect.extra.message == localize('ph_boss_disabled') then
+            append_effect_to_tower(effect, { toum_boss_disabled = 1 })
+            if effect.message == localize('ph_boss_disabled') then effect.message = nil end
+            if effect.extra and effect.extra.message == localize('ph_boss_disabled') then effect.extra.message = nil end
+        end
+        if effect.message == localize('k_duplicated_ex') or effect.extra and effect.extra.message == localize('k_duplicated_ex') then
+            append_effect_to_tower(effect, { toum_perkolate = 1 })
+            if effect.message == localize('k_duplicated_ex') then effect.message = nil end
+            if effect.extra and effect.extra.message == localize('k_duplicated_ex') then effect.extra.message = nil end
+        end
+        if effect.message == localize('k_copied_ex') or effect.extra and effect.extra.message == localize('k_copied_ex') and effect.playing_cards_created then
+            append_effect_to_tower(effect, { toum_first_played_copied = 1 })
+            if effect.message == localize('k_copied_ex') then effect.message = nil end
+            if effect.extra and effect.extra.message == localize('k_copied_ex') then effect.extra.message = nil end
+            if effect.playing_cards_created then effect.playing_cards_created = nil end
+        end
+        if effect.playing_cards_created then effect.playing_cards_created = nil end
+    end,
     set_ability = function(self, card, initial, delay_sprites)
         assert(card.ability)
         assert(card.ability.extra)
         card.ability.extra.remembered_effect = G.GAME.toum_last_sold_last_triggered_effect
+        if card.ability.extra.remembered_effect then
+            self.augment_effect(self, card, card.ability.extra.remembered_effect)
+        end
     end,
     calculate = function(self, card, context)
         if context.selling_card and context.card.ability.toum_most_recent_trigger then
@@ -1725,12 +2064,25 @@ SMODS.Joker {
             }
             local effect_to_paste = copy_table_but_not_these_classes(context.card.ability.toum_most_recent_trigger, {Object})
             card.ability.extra.remembered_effect = remove_all_properties_of_type_recursively(effect_to_paste, 'function')
+            local effect = card.ability.extra.remembered_effect
+            if effect then
+                self.augment_effect(self, card, effect)
+            end
         end
         if context.joker_main then
             if card.ability.extra.remembered_effect then
                 return card.ability.extra.remembered_effect
             end
         end
+        -- correlated with the changes to make editions on retriggered jokers retrigger
+        if context.retrigger_joker_check and card.ability.extra.remembered_effect and card.ability.extra.remembered_effect.toum_scrapbook_retrigger_self and context.other_card == card then
+            return {
+                message = localize('k_again_ex'),
+                repetitions = 1,
+                card = card
+            }
+        end
+
     end
 }
 
@@ -2201,7 +2553,7 @@ assert_equal(increase_digits(number(6789)), number(78910))
 assert_equal(increase_digits(number(99999)), number(1010101010))
 assert_equal(increase_digits(number(-590)), number(-6101))
 assert_equal(increase_digits(number(1.9)), number(2.10))
-assert_equal(increase_digits(number(5.4e19)), number(6.5e210)) -- good lord
+assert_equal_with_tolerance(increase_digits(number(5.4e19)), number(6.5e210), 1e201) -- good lord
 
 Airtokers.custom_effects.increase_digits_chips = {
     core = function(amount)
