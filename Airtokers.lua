@@ -13,6 +13,18 @@
 local Airtokers = SMODS.current_mod
 Airtokers.debug = {}
 
+local function test_suite(name, suite)
+    local test_suite_label = 'Test suite - '..name .. ': '
+    sendInfoMessage(test_suite_label .. 'start', 'Airtoker-Tests')
+    local start_time = os.clock()
+    local status, err = pcall(suite)
+    if not status then
+        sendInfoMessage(test_suite_label..'failed x ██', 'Airtoker-Tests')
+        sendErrorMessage(err, 'Airtoker-Tests')
+    end
+    sendInfoMessage(string.format(test_suite_label .. 'finished, elapsed time: %.2f', os.clock() - start_time), 'Airtoker-Tests')
+end
+
 local function primitive_math_sign(n)
     return (n < 0 and -1) or 1
 end
@@ -80,7 +92,9 @@ local function number_equal(a, b)
 end
 Airtokers.number_equal = number_equal
 
-assert(number_equal(number(1600), number(1600)))
+test_suite('number_equal', function()
+    assert(number_equal(number(1600), number(1600)))
+end)
 
 local function is_zero(a)
     return number_equal(a, number(0))
@@ -194,7 +208,7 @@ local function number_mod(a, b)
     return a % b
 end
 
-if true then
+test_suite('number_mod', function ()
     local result = number_mod(number(5040*6), number(7*7))
     local expected = number(7)
     result = result - 0.0001
@@ -203,7 +217,7 @@ if true then
 
     assert(number_less_than(number_mod(number(120000), number(2)), number(2)))
     --assert(number_equal(number_mod(number(120000), number(2)), number(0)))
-end
+end)
 
 local function number_equal_with_tolerance(a, b, tolerance)
     return number_less_than(number_abs(a - b), tolerance)
@@ -230,21 +244,21 @@ end
 
 -- sanity checks
 
-if false then
+test_suite('sanity checks on numbers', function()
 
     assert(number(5) == number(5))
     assert(number(5) + number(5) == number(10))
     assert(number(10) == number(5) + number(5))
     assert(number(5) * number(5) == number(25))
-    print(number(5), number(5) ^ number(5), number(3125), number(5) ^ number(5) == number(3125))
-    print(inspect(number(5) ^ number(5)), inspect(number(3125)))
-    print(getmetatable(number(5) ^ number(5)), getmetatable(number(3125)), getmetatable(number(5) ^ number(5)) == getmetatable(number(3125)))
-    print(getmetatable(number(5) ^ number(5)).__eq, getmetatable(number(3125)).__eq, getmetatable(number(5) ^ number(5)).__eq == getmetatable(number(3125)).__eq)
+    -- print(number(5), number(5) ^ number(5), number(3125), number(5) ^ number(5) == number(3125))
+    -- print(inspect(number(5) ^ number(5)), inspect(number(3125)))
+    -- print(getmetatable(number(5) ^ number(5)), getmetatable(number(3125)), getmetatable(number(5) ^ number(5)) == getmetatable(number(3125)))
+    -- print(getmetatable(number(5) ^ number(5)).__eq, getmetatable(number(3125)).__eq, getmetatable(number(5) ^ number(5)).__eq == getmetatable(number(3125)).__eq)
     assert(number(5) ^ number(5) == number(3125))
 
-    assert(not number(5) == number(10))
-    assert(not number(5) == number(0))
-    assert(not number(5) == number(-10))
+    assert(not (number(5) == number(10)))
+    assert(not (number(5) == number(0)))
+    assert(not (number(5) == number(-10)))
 
     assert(number(5) ~= number(10))
     assert(number(5) ~= number(0))
@@ -257,14 +271,18 @@ if false then
     assert(number(9) ^ number(0.5) == number(3))
 
     if type(number(5)) == 'table' then
-        assert(number(25):log(number(5)) == number(2))
+        if is_talisman_bignumber(number(5)) then
+            assert(number(25):log(number(5)) == number(2))
+        else
+            assert(number(25):logBase(number(5)) == number(2))
+        end
     else
         assert(math.log(number(25), number(5)) == number(2))
     end
 
     -- lhs 10
 
-    assert(not number(10) > number(10))
+    assert(not (number(10) > number(10)))
     assert(number(10) > number(5))
     assert(number(10) > number(0))
     assert(number(10) > number(-5))
@@ -274,29 +292,29 @@ if false then
     assert(number(10) >= number(0))
     assert(number(10) >= number(-5))
 
-    assert(not number(10) < number(10))
-    assert(not number(10) < number(5))
-    assert(not number(10) < number(0))
-    assert(not number(10) < number(-5))
+    assert(not (number(10) < number(10)))
+    assert(not (number(10) < number(5)))
+    assert(not (number(10) < number(0)))
+    assert(not (number(10) < number(-5)))
 
     assert(number(10) <= number(10))
-    assert(not number(10) <= number(5))
-    assert(not number(10) <= number(0))
-    assert(not number(10) <= number(-5))
+    assert(not (number(10) <= number(5)))
+    assert(not (number(10) <= number(0)))
+    assert(not (number(10) <= number(-5)))
 
     -- rhs 10
 
-    assert(not number(10) > number(10) )
-    assert(not number(5) > number(10) )
-    assert(not number(0) > number(10) )
-    assert(not number(-5) > number(10) )
+    assert(not (number(10) > number(10)) )
+    assert(not (number(5) > number(10)) )
+    assert(not (number(0) > number(10)) )
+    assert(not (number(-5) > number(10)) )
 
     assert(number(10) >= number(10) )
-    assert(not number(5) >= number(10) )
-    assert(not number(0) >= number(10) )
-    assert(not number(-5) >= number(10) )
+    assert(not (number(5) >= number(10)) )
+    assert(not (number(0) >= number(10)) )
+    assert(not (number(-5) >= number(10)) )
 
-    assert(not number(10) < number(10) )
+    assert(not (number(10) < number(10)) )
     assert(number(5) < number(10) )
     assert(number(0) < number(10) )
     assert(number(-5) < number(10) )
@@ -308,7 +326,7 @@ if false then
 
     -- lhs 1
 
-    assert(not number(1.0) > number(1.0))
+    assert(not (number(1.0) > number(1.0)))
     assert(number(1.0) > number(.5))
     assert(number(1.0) > number(.0))
     assert(number(1.0) > number(-.5))
@@ -318,29 +336,29 @@ if false then
     assert(number(1.0) >= number(.0))
     assert(number(1.0) >= number(-.5))
 
-    assert(not number(1.0) < number(1.0))
-    assert(not number(1.0) < number(.5))
-    assert(not number(1.0) < number(.0))
-    assert(not number(1.0) < number(-.5))
+    assert(not (number(1.0) < number(1.0)))
+    assert(not (number(1.0) < number(.5)))
+    assert(not (number(1.0) < number(.0)))
+    assert(not (number(1.0) < number(-.5)))
 
     assert(number(1.0) <= number(1.0))
-    assert(not number(1.0) <= number(.5))
-    assert(not number(1.0) <= number(.0))
-    assert(not number(1.0) <= number(-.5))
+    assert(not (number(1.0) <= number(.5)))
+    assert(not (number(1.0) <= number(.0)))
+    assert(not (number(1.0) <= number(-.5)))
 
     -- rhs 1
 
-    assert(not number(1.0) > number(1.0) )
-    assert(not number(.5) > number(1.0) )
-    assert(not number(.0) > number(1.0) )
-    assert(not number(-.5) > number(1.0) )
+    assert(not (number(1.0) > number(1.0)) )
+    assert(not (number(.5) > number(1.0)) )
+    assert(not (number(.0) > number(1.0)) )
+    assert(not (number(-.5) > number(1.0)) )
 
     assert(number(1.0) >= number(1.0) )
-    assert(not number(.5) >= number(1.0) )
-    assert(not number(.0) >= number(1.0) )
-    assert(not number(-.5) >= number(1.0) )
+    assert(not (number(.5) >= number(1.0)) )
+    assert(not (number(.0) >= number(1.0)) )
+    assert(not (number(-.5) >= number(1.0)) )
 
-    assert(not number(1.0) < number(1.0) )
+    assert(not (number(1.0) < number(1.0)) )
     assert(number(.5) < number(1.0) )
     assert(number(.0) < number(1.0) )
     assert(number(-.5) < number(1.0) )
@@ -350,7 +368,8 @@ if false then
     assert(number(.0) <= number(1.0) )
     assert(number(-.5) <= number(1.0) )
 
-end
+    assert(false)
+end)
 
 --assert(number_greater_than_or_equal(number(1), number(0)))
 
@@ -2318,10 +2337,12 @@ end
 local assert_number_equal = function (a,b) return assert_equal(a, b, number_equal, 'number_equal') end
 local assert_equal_with_tolerance = function (a,b,tolerance) return assert_equal(a, b, function(a,b) return number_equal_with_tolerance(a, b, tolerance) end, 'number_equal_with_tolerance('..tolerance..')') end
 
-assert_equal(reverse_digits(number(1234567)), number(7654321))
-assert_equal(reverse_digits(number(1.23)), number(3.21))
-assert_equal(reverse_digits(number(1.6e87)), number(6.1e78))
-assert_equal(reverse_digits(number(-1234567)), number(-7654321))
+test_suite('reverse_digits', function()
+    assert_equal(reverse_digits(number(1234567)), number(7654321))
+    assert_equal(reverse_digits(number(1.23)), number(3.21))
+    assert_equal(reverse_digits(number(1.6e87)), number(6.1e78))
+    assert_equal(reverse_digits(number(-1234567)), number(-7654321))
+end)
 
 Airtokers.custom_effects.digit_reverse_chips = {
     core = function(amount)
@@ -2457,20 +2478,22 @@ Airtokers.custom_effects.factorial_chips = {
     ['config.scale'] = 0.7,
 }
 
-assert_equal(factorial(number(0)), number(1))
-assert_equal(factorial(number(1)), number(1))
-assert_equal(factorial(number(2)), number(2))
-assert_equal(factorial(number(3)), number(6))
-assert_equal_with_tolerance(factorial(number(4)), number(24), 0.00001)
-assert_equal_with_tolerance(factorial(number(5)), number(120), 0.00001)
-assert_equal_with_tolerance(factorial(number(50)), number(3.0414093e+64), 3.0414093e+58)
-assert_equal_with_tolerance(factorial(number(0.5)), number(0.88622692545), 0.1)
-assert_equal_with_tolerance(factorial(number(-0.5)), number(0.88622692545 / 0.5), 0.1)
-assert_equal_with_tolerance(factorial(number(-1.5)), number(0.88622692545 / 0.5 / -0.5), 0.2)
-assert_equal_with_tolerance(factorial(number(-2.5)), number(0.88622692545 / 0.5 / -0.5 / -1.5), 0.3)
-assert_equal_with_tolerance(factorial(number(-20.5)), number(0), 0.00001)
-assert_equal(factorial(number(-40.5)), number(0))
-assert(number_not_equal(factorial(number(-70)), factorial(number(-70)))) -- nan
+test_suite('factorial', function()
+    assert_equal(factorial(number(0)), number(1))
+    assert_equal(factorial(number(1)), number(1))
+    assert_equal(factorial(number(2)), number(2))
+    assert_equal(factorial(number(3)), number(6))
+    assert_equal_with_tolerance(factorial(number(4)), number(24), 0.00001)
+    assert_equal_with_tolerance(factorial(number(5)), number(120), 0.00001)
+    assert_equal_with_tolerance(factorial(number(50)), number(3.0414093e+64), 3.0414093e+58)
+    assert_equal_with_tolerance(factorial(number(0.5)), number(0.88622692545), 0.1)
+    assert_equal_with_tolerance(factorial(number(-0.5)), number(0.88622692545 / 0.5), 0.1)
+    assert_equal_with_tolerance(factorial(number(-1.5)), number(0.88622692545 / 0.5 / -0.5), 0.2)
+    assert_equal_with_tolerance(factorial(number(-2.5)), number(0.88622692545 / 0.5 / -0.5 / -1.5), 0.3)
+    assert_equal_with_tolerance(factorial(number(-20.5)), number(0), 0.00001)
+    assert_equal(factorial(number(-40.5)), number(0))
+    assert(number_not_equal(factorial(number(-70)), factorial(number(-70)))) -- nan
+end)
 
 Airtokers.custom_effects.rad_2_deg_chips = {
     core = function(amount)
@@ -2570,12 +2593,14 @@ local function increase_digits(n)
     return chips_number
 end
 
-assert_equal(increase_digits(number(10000)), number(21111))
-assert_equal(increase_digits(number(6789)), number(78910))
-assert_equal(increase_digits(number(99999)), number(1010101010))
-assert_equal(increase_digits(number(-590)), number(-6101))
-assert_equal(increase_digits(number(1.9)), number(2.10))
-assert_equal_with_tolerance(increase_digits(number(5.4e19)), number(6.5e210), 1e201) -- good lord
+test_suite('increase_digits', function()
+    assert_equal(increase_digits(number(10000)), number(21111))
+    assert_equal(increase_digits(number(6789)), number(78910))
+    assert_equal(increase_digits(number(99999)), number(1010101010))
+    assert_equal(increase_digits(number(-590)), number(-6101))
+    assert_equal(increase_digits(number(1.9)), number(2.10))
+    assert_equal_with_tolerance(increase_digits(number(5.4e19)), number(6.5e210), 1e201) -- good lord
+end)
 
 Airtokers.custom_effects.increase_digits_chips = {
     core = function(amount)
@@ -2594,6 +2619,7 @@ Airtokers.custom_effects.increase_digits_chips = {
 
 local prime_limit = 1000000
 local primes_up_to_1000000_spaced = {}
+local prime_calculaton_start_time = os.clock()
 sendInfoMessage('Calculating primes less than 1000000, started at '..os.date('%H:%M:%S'), "Mod-Airtokers-Prime-Calculation")
 for i = 2, math.sqrt(prime_limit) do
     if primes_up_to_1000000_spaced[i] == nil then 
@@ -2610,7 +2636,7 @@ for i = 2, prime_limit do
     end
 end
 primes_up_to_1000000_spaced = nil
-sendInfoMessage('Calculating primes less than 1000000, found '..tostring(#primes_up_to_1000000)..', should have found 78,498, finished at '..os.date('%H:%M:%S'), "Mod-Airtokers-Prime-Calculation")
+sendInfoMessage('Calculating primes less than 1000000, found '..tostring(#primes_up_to_1000000)..', should have found 78,498, finished at '..os.date('%H:%M:%S')..', took '.. os.clock() - prime_calculaton_start_time .. ' seconds', "Mod-Airtokers-Prime-Calculation")
 
 local function is_prime(n)
     if number_greater_than(n, number(100000 ^ 2)) then
@@ -2629,13 +2655,17 @@ local function is_prime(n)
     return true
 end
 
-assert(is_prime(number(5)))
-assert(is_prime(number(101)))
-assert(is_prime(number(1979339339)))
-assert(not is_prime(number(102221243011))) -- too big
-assert(not is_prime(number(6)))
-assert(not is_prime(number(60000000)))
-assert(not is_prime(number(60000000000000000000000000000000000000)))
+test_suite('is_prime', function()
+    assert(is_prime(number(5)))
+    assert(is_prime(number(101)))
+    --                     1000000
+    assert(is_prime(number(1016153)))
+    -- assert(is_prime(number(1979339339))) -- this causes the test to take about 10 seconds to run
+    assert(not is_prime(number(102221243011))) -- too big
+    assert(not is_prime(number(6)))
+    assert(not is_prime(number(60000000)))
+    assert(not is_prime(number(60000000000000000000000000000000000000)))
+end)
 
 local function get_prime_factorization(n)
     n = math.abs(n)
@@ -2655,19 +2685,21 @@ local function get_prime_factorization(n)
     return prime_factorization, n
 end
 
-assert((get_prime_factorization(number(50))[2] == 1))
-assert((get_prime_factorization(number(50))[3] == nil))
-assert((get_prime_factorization(number(50))[4] == nil))
-assert((get_prime_factorization(number(50))[5] == 2))
-
-assert((get_prime_factorization(number(8))[2] == 3))
-assert((get_prime_factorization(number(8))[5] == nil))
-
-assert((get_prime_factorization(number(80000))[2] == 7))
-assert((get_prime_factorization(number(80000))[5] == 4))
-assert((get_prime_factorization(number(120000))[2] == 6))
-assert((get_prime_factorization(number(120000))[3] == 1))
-assert((get_prime_factorization(number(120000))[5] == 4))
+test_suite('get_prime_factorization', function()
+    assert((get_prime_factorization(number(50))[2] == 1))
+    assert((get_prime_factorization(number(50))[3] == nil))
+    assert((get_prime_factorization(number(50))[4] == nil))
+    assert((get_prime_factorization(number(50))[5] == 2))
+    
+    assert((get_prime_factorization(number(8))[2] == 3))
+    assert((get_prime_factorization(number(8))[5] == nil))
+    
+    assert((get_prime_factorization(number(80000))[2] == 7))
+    assert((get_prime_factorization(number(80000))[5] == 4))
+    assert((get_prime_factorization(number(120000))[2] == 6))
+    assert((get_prime_factorization(number(120000))[3] == 1))
+    assert((get_prime_factorization(number(120000))[5] == 4))
+end)
 
 
 local eulers_totient_function_debug = function(m, m2) print(m, m2) end
@@ -2722,13 +2754,16 @@ Airtokers.custom_effects.eulers_totient_function_chips = {
     ['config.scale'] = 0.7,
 }
 
-assert(eulers_totient_function(number(5*5*5*2*2*2*2*3)))
--- 6000
---assert(number_equal(eulers_totient_function(number(5*5*5*2*2*2*2*3)), number(1600)))
-assert_equal_with_tolerance(eulers_totient_function(number(5*5*5*2*2*2*2*3)), number(1600), 0.0001)
-assert_equal_with_tolerance(eulers_totient_function(number(-27)), number(-18), 0.0001)
---print(eulers_totient_function(number(-27))) -- -18
-
+test_suite('eulers_totient_function', function()
+    assert(eulers_totient_function(number(5*5*5*2*2*2*2*3)))
+    -- 6000
+    --assert(number_equal(eulers_totient_function(number(5*5*5*2*2*2*2*3)), number(1600)))
+    assert_equal_with_tolerance(eulers_totient_function(number(5*5*5*2*2*2*2*3)), number(1600), 0.0001)
+    assert_equal_with_tolerance(eulers_totient_function(number(-27)), number(-18), 0.0001)
+    assert_equal_with_tolerance(eulers_totient_function(number(5*5*5*2*2*2*2*3 + 0.4)), number(1600), 0.0001)
+    --print(eulers_totient_function(number(-27))) -- -18
+end)
+    
 -- shoutout to https://math.stackexchange.com/questions/1363950/average-lcma-b-1-le-a-le-b-le-n-and-asymptotic-behavior
 -- for the formula (0.18269074235) * x^2
 local function least_common_multiple(a, b)
@@ -2799,10 +2834,12 @@ local function least_common_multiple(a, b)
     return product / multiplied_by
 end
 
-assert_equal_with_tolerance(least_common_multiple(number(2*2*2), number(2*2*3)), number(2*2*2*3), 0.000001)
-assert_equal_with_tolerance(least_common_multiple(number(-6), number(-8)), number(-24), 0.000001)
-assert_equal_with_tolerance(least_common_multiple(number(0.9), number(1.15)), number(20.7), 0.000001)
-assert_equal_with_tolerance(least_common_multiple(number(0), number(0)), number(0), 0.000001)
+test_suite('least_common_multiple', function()
+    assert_equal_with_tolerance(least_common_multiple(number(2*2*2), number(2*2*3)), number(2*2*2*3), 0.000001)
+    assert_equal_with_tolerance(least_common_multiple(number(-6), number(-8)), number(-24), 0.000001)
+    assert_equal_with_tolerance(least_common_multiple(number(0.9), number(1.15)), number(20.7), 0.000001)
+    assert_equal_with_tolerance(least_common_multiple(number(0), number(0)), number(0), 0.000001)
+end)
 
 Airtokers.custom_effects.lcm_mult = {
     core = function(amount)
@@ -3271,20 +3308,22 @@ local function list_to_effect_tower(effects)
     return total_effect
 end
 
-assert(list_to_effect_tower({}) == nil)
-
-assert(list_to_effect_tower({{a = 1}}).a == 1)
-
-assert(list_to_effect_tower({{a = 1}, {b = 2}}).a == 1)
-assert(list_to_effect_tower({{a = 1}, {b = 2}}).extra.b == 2)
-
-assert(list_to_effect_tower({{a = 1, A = 2}, {b = 3, B = 4}}).a == 1)
-assert(list_to_effect_tower({{a = 1, A = 2}, {b = 3, B = 4}}).A == 2)
-assert(list_to_effect_tower({{a = 1, A = 2}, {b = 3, B = 4}}).extra.b == 3)
-assert(list_to_effect_tower({{a = 1, A = 2}, {b = 3, B = 4}}).extra.B == 4)
-
-assert(list_to_effect_tower({{a = 1}, {b = 2}, {c = 3}, {d = 4, D = 5}}).extra.extra.extra.d == 4)
-assert(list_to_effect_tower({{a = 1}, {b = 2}, {c = 3}, {d = 4, D = 5}}).extra.extra.extra.D == 5)
+test_suite('list_to_effect_tower', function()
+    assert(list_to_effect_tower({}) == nil)
+    
+    assert(list_to_effect_tower({{a = 1}}).a == 1)
+    
+    assert(list_to_effect_tower({{a = 1}, {b = 2}}).a == 1)
+    assert(list_to_effect_tower({{a = 1}, {b = 2}}).extra.b == 2)
+    
+    assert(list_to_effect_tower({{a = 1, A = 2}, {b = 3, B = 4}}).a == 1)
+    assert(list_to_effect_tower({{a = 1, A = 2}, {b = 3, B = 4}}).A == 2)
+    assert(list_to_effect_tower({{a = 1, A = 2}, {b = 3, B = 4}}).extra.b == 3)
+    assert(list_to_effect_tower({{a = 1, A = 2}, {b = 3, B = 4}}).extra.B == 4)
+    
+    assert(list_to_effect_tower({{a = 1}, {b = 2}, {c = 3}, {d = 4, D = 5}}).extra.extra.extra.d == 4)
+    assert(list_to_effect_tower({{a = 1}, {b = 2}, {c = 3}, {d = 4, D = 5}}).extra.extra.extra.D == 5)
+end)
 
 --- A random cycle of ranks is setup for this seed. Each played card will have its rank set to the next in the cycle.
 SMODS.Joker{
@@ -3664,12 +3703,14 @@ end
 
 
 
-assert_equal(convert_to_nonary(0.5), number(0.44444444))
-assert_equal(convert_to_nonary(1/3), number(0.3))
-assert_equal(convert_to_nonary(3000), number(4103))
-assert_equal(convert_to_nonary(6561), number(10000))
-assert_equal(convert_to_nonary(750.7), number(1023.62626262))
-assert_equal(convert_to_nonary(-750.7), number(-1023.62626262))
+test_suite('convert_to_nonary', function()
+    assert_equal(convert_to_nonary(0.5), number(0.44444444))
+    assert_equal(convert_to_nonary(1/3), number(0.3))
+    assert_equal(convert_to_nonary(3000), number(4103))
+    assert_equal(convert_to_nonary(6561), number(10000))
+    assert_equal(convert_to_nonary(750.7), number(1023.62626262))
+    assert_equal(convert_to_nonary(-750.7), number(-1023.62626262))
+end)
 
 local wrappedWithNullReturnWarning = function(original_func, name)
     assert(name)
@@ -3734,12 +3775,14 @@ local function try_suit_set(suit_sets, target_func, prune_func, index, used_suit
     return false
 end
 
-assert(try_suit_set({{'h'}, {'s','h'}, {'s','h','c','d'}, {'d'}}, function(n) return n == 3 end, function(n) return n > 3 end))
-assert(try_suit_set({{'h'}, {'s','h'}, {'s','c'}, {'d'}, {'c'}}, function(n) return n == 3 end, function(n) return n > 3 end))
-assert(not try_suit_set({{'h'}, {'s','h'}, {'s','c'}, {'d'}}, function(n) return n == 2 end, function(n) return n > 2 end))
-assert(try_suit_set({{'h'}, {}, {'s','c'}, {}}, function(n) return n == 2 end, function(n) return n > 2 end))
-assert(not try_suit_set({{'h'}, {}, {'s','c'}, {}}, function(n) return n == 3 end, function(n) return n > 3 end))
-assert(not try_suit_set({{'h'}, {'h'}, {}, {'h'}, {}}, function(n) return n == 3 end, function(n) return n > 3 end))
+test_suite('try_suit_set', function()
+    assert(try_suit_set({{'h'}, {'s','h'}, {'s','h','c','d'}, {'d'}}, function(n) return n == 3 end, function(n) return n > 3 end))
+    assert(try_suit_set({{'h'}, {'s','h'}, {'s','c'}, {'d'}, {'c'}}, function(n) return n == 3 end, function(n) return n > 3 end))
+    assert(not try_suit_set({{'h'}, {'s','h'}, {'s','c'}, {'d'}}, function(n) return n == 2 end, function(n) return n > 2 end))
+    assert(try_suit_set({{'h'}, {}, {'s','c'}, {}}, function(n) return n == 2 end, function(n) return n > 2 end))
+    assert(not try_suit_set({{'h'}, {}, {'s','c'}, {}}, function(n) return n == 3 end, function(n) return n > 3 end))
+    assert(not try_suit_set({{'h'}, {'h'}, {}, {'h'}, {}}, function(n) return n == 3 end, function(n) return n > 3 end))
+end)
 
 -- actually treating it like "divisors" which has a slightly less vague definition (specifically for 0)
 local function sum_of_factors(n)
@@ -3788,15 +3831,17 @@ local function sum_of_factors(n)
     return product * original_sign
 end
 
---print(sum_of_factors(12))
-assert_equal_with_tolerance(sum_of_factors(12), number(28), 0.000001)
-assert_equal_with_tolerance(sum_of_factors(5), number(6), 0.000001)
-assert_equal_with_tolerance(sum_of_factors(30), number(72), 0.000001)
---print(sum_of_factors(-40))
-assert_equal_with_tolerance(sum_of_factors(-40), number(-90), 0.000001) -- 2,2,2,5 = 15 * 6
-assert_equal_with_tolerance(sum_of_factors(1), number(1), 0.000001)
-assert_equal_with_tolerance(sum_of_factors(-1), number(-1), 0.000001)
-assert_equal_with_tolerance(sum_of_factors(0), number(0), 0.000001)
+test_suite('sum_of_factors', function()
+    --print(sum_of_factors(12))
+    assert_equal_with_tolerance(sum_of_factors(12), number(28), 0.000001)
+    assert_equal_with_tolerance(sum_of_factors(5), number(6), 0.000001)
+    assert_equal_with_tolerance(sum_of_factors(30), number(72), 0.000001)
+    --print(sum_of_factors(-40))
+    assert_equal_with_tolerance(sum_of_factors(-40), number(-90), 0.000001) -- 2,2,2,5 = 15 * 6
+    assert_equal_with_tolerance(sum_of_factors(1), number(1), 0.000001)
+    assert_equal_with_tolerance(sum_of_factors(-1), number(-1), 0.000001)
+    assert_equal_with_tolerance(sum_of_factors(0), number(0), 0.000001)
+end)
 
 Airtokers.custom_effects.sum_of_factors_chips = {
     core = function(amount)
