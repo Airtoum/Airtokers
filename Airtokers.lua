@@ -231,14 +231,15 @@ local function num_to_str_full(n)
 end
 
 local function velocitize(n, naked_zero)
+    local abs_n = number_abs(n)
     if is_positive(n) then
-        return '+'..format_ui_value(n)
+        return '+'..format_ui_value(abs_n)
     elseif is_negative(n) then
-        return '-'..format_ui_value(n)
+        return '-'..format_ui_value(abs_n)
     elseif naked_zero then
-        return format_ui_value(n)
+        return format_ui_value(abs_n)
     else
-        return '+'..format_ui_value(n)
+        return '+'..format_ui_value(abs_n)
     end
 end
 
@@ -1003,6 +1004,8 @@ SMODS.Joker {
             "Gives {C:red}#3##1#{} Mult",
             "Loses {C:red}#2#{} Mult each",
             "time you read this",
+            "{O:6,s:0.8,C:inactive}(Min of {s:0.8,C:mult}#4#{s:0.8,C:inactive})",
+            "{O:7,s:0.8,C:inactive}(Max of {s:0.8,C:mult}#5#{s:0.8,C:inactive})",
         },
     },
     config = { extra = { mult = number(17), mult_gain = number(-3) * 1, mult_min = number(-60), mult_max = number(60) }},
@@ -1014,6 +1017,10 @@ SMODS.Joker {
             card.ability.extra.mult,
             card.ability.extra.mult_gain * -1,
             number_greater_than_or_equal(card.ability.extra.mult, number(0)) and "+" or "",
+            velocitize(card.ability.extra.mult_min),
+            velocitize(card.ability.extra.mult_max),
+            not number_less_than_or_equal(card.ability.extra.mult, card.ability.extra.mult_min),
+            not number_greater_than_or_equal(card.ability.extra.mult, card.ability.extra.mult_max),
         } }
     end,
     rarity = 1,
