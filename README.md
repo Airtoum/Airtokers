@@ -1,6 +1,8 @@
 # Airtokers
 
-This is my Balatro mod! Featuring some silly and some mathy effects. Requires Lovely and Steammodded, and should be Compatible with Talisman and Cryptid. (I've worked really hard to make it as compatible with Talisman as I can.)
+![A drawing of two Airtoums reaching to each other as the Queen of Spades. This sprite is used for Tomorrow Joker](assets/2x/Airtokers.png)
+
+This is my Balatro mod! Featuring some silly and some mathy effects. Requires Lovely and Steammodded, and should be compatible with Talisman and Cryptid. (I've worked really hard to make it as compatible with Talisman as I can.)
 
 ## Credits
 
@@ -32,3 +34,5 @@ ploop1.ogg, ploop2.ogg, ploop3.ogg, ploop4.ogg, and ploop5.ogg were also recorde
 The idea for the elevator making a water drop sound when facing the water was from Hyperspade
 
 The name "Euler's Curse" is from ItsPhoenix
+
+Some of the math algorithms weren't derived by me. I've left references to them in the code.
