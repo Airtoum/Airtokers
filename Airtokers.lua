@@ -531,7 +531,7 @@ SMODS.Joker {
     rarity = 1,
     atlas = "Airtokers",
     pos = {x = 1, y = 0},
-    cost = 4,
+    cost = 5,
 }
 
 -- saving hook
@@ -751,7 +751,7 @@ SMODS.Joker {
     atlas = "Airtokers",
     pos = {x = 2, y = 0},
     -- swallows 1 card from your deck when blind is selected. when sold, returns all swallowed cards back to your deck 
-    cost = 3,
+    cost = 4,
     set_ability = function(self, card, initial, delay_sprites)
         card.swallowed = CardArea(0, 0, 0, 0, {card_limit = 500, type = 'deck'})
         -- perhaps incorporate the offset and scale into the final design of the card. leave a hole in the art?
@@ -1019,7 +1019,7 @@ SMODS.Joker {
     rarity = 1,
     atlas = "Airtokers",
     pos = {x = 4, y = 0},
-    cost = 2,
+    cost = 3,
     calculate = function(self, card, context)
         if context.joker_main then
             return {
@@ -1221,7 +1221,7 @@ SMODS.Joker {
     rarity = 2,
     atlas = "Airtokers",
     pos = {x = 0, y = 1},
-    cost = 2,
+    cost = 3,
     calculate = function(self, card, context)
         if context.other_joker and G.GAME.current_round.hands_left == 0 then
             local my_pos = nil
@@ -1413,7 +1413,7 @@ SMODS.Joker {
     rarity = 1,
     atlas = "Airtokers",
     pos = {x = 1, y = 1},
-    cost = 2,
+    cost = 3,
     pick_trigger_requirements = function(self)
         self.trigger_requirements = {}
         for i = 1, 3 do
@@ -2032,10 +2032,10 @@ SMODS.Joker {
     loc_vars = function()
         
     end,
-    rarity = 1,
+    rarity = 2,
     atlas = "Airtokers",
     pos = {x = 3, y = 1},
-    cost = 2,
+    cost = 7,
     augment_effect = function(self, card, effect)
         if not effect then return end
         local amount = nil
@@ -2235,7 +2235,7 @@ SMODS.Joker {
     rarity = 1,
     atlas = "SpinToWin",
     pos = {v = 7, y = 0},
-    cost = 2,
+    cost = 5,
     --set_sprites = function(self, card, front)
     --    card.children.center
     --end,
@@ -2877,7 +2877,7 @@ SMODS.Joker {
     rarity = 3,
     atlas = "Airtokers",
     pos = {x = 0, y = 2},
-    cost = 2,
+    cost = 3,
     calculate = function(self, card, context)
         if context.joker_main then
             return {
@@ -3005,7 +3005,7 @@ SMODS.Joker{
     rarity = 1,
     atlas = "Airtokers",
     pos = {x = 2, y = 2},
-    cost = 2,
+    cost = 4,
     calculate = function(self, card, context)
         if context.joker_main then
             return {
@@ -3608,7 +3608,7 @@ SMODS.Joker {
     pos = {x = 0, y = 0},
     display_size = { w = 71, h = 113 },
     --pixel_size = { w = 71, h = 113 },
-    cost = 2,
+    cost = 0,
     set_ability = function(self, card, initial, delay_sprites)
         G.E_MANAGER:add_event(Event({
             func = (function(t)
@@ -3983,7 +3983,7 @@ SMODS.Joker {
     rarity = 2,
     atlas = "Airtokers",
     pos = {x = 3, y = 3},
-    cost = 9,
+    cost = 7,
     set_ability = function(self, card, initial, delay_sprites)
         G.E_MANAGER:add_event(Event({
             func = (function(t)
