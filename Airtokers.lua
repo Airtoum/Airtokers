@@ -1324,6 +1324,17 @@ SMODS.Joker {
     end
 }
 
+if BalaNotation and BalaNotation.format then
+    local original_balanotation_format = BalaNotation.format
+    function BalaNotation:format(n, places, a3, a4, a5, a6, a7, a8, a9)
+        if (n.isNaN and n:isNaN() or (n.m and not (n.m == n.m)) or not (n == n)) then
+            return "Not a Number"
+        else
+            return original_balanotation_format(self, n, places, a3, a4, a5, a6, a7, a8, a9)
+        end
+    end
+end
+
 Airtokers.custom_effects.exp_mult = {
     core = function(amount)
         mult = mod_mult(amount ^ mult) -- amount is *base*. mult ^ amount should be called "power_mult"

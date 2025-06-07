@@ -818,3 +818,15 @@ match_indent = false
 pattern = "local new_frame = math.floor(G.ANIMATION_FPS*(G.TIMERS.REAL - self.offset_seconds))%self.current_animation.frames"
 payload = "local new_frame = math.floor(G.ANIMATION_FPS*(G.TIMERS.REAL_SHADER_REAL - self.offset_seconds))%self.current_animation.frames"
 
+## if score is NaN it lets you start over at 0
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+position = "after"
+match_indent = false
+pattern = "check_for_unlock({type = 'chip_score', chips = math.floor(hand_chips*mult)})"
+payload = '''
+if not (G.GAME.chips == G.GAME.chips) or type(G.GAME.chips) == 'table' and (G.GAME.chips.isNaN and G.GAME.chips:isNaN() or (G.GAME.chips.m and not (G.GAME.chips.m == G.GAME.chips.m))) then
+    G.GAME.chips = to_big and to_big(0) or 0
+end
+'''
