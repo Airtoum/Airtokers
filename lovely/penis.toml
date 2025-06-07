@@ -13,7 +13,7 @@ pattern = '''
 '''
 payload = '''
     G.GAME.hands[text].played = G.GAME.hands[text].played - 1                  		 -- Airtokers! // >⏝o )\
-    G.GAME.hands[text].played = G.GAME.hands[text].played + (G.GAME.penis or 1)                  		 -- Airtokers! // >⏝o )\
+    G.GAME.hands[text].played = G.GAME.hands[text].played + 1 + (G.GAME.penis or 0)                  		 -- Airtokers! // >⏝o )\
 '''
 
 [[patches]]
@@ -26,5 +26,5 @@ pattern = '''
 '''
 payload = '''
     G.GAME.hands[text].played_this_round = G.GAME.hands[text].played_this_round - 1                  		 -- Airtokers! // >⏝o )\
-    G.GAME.hands[text].played_this_round = G.GAME.hands[text].played_this_round + (G.GAME.penis or 1)                  		 -- Airtokers! // >⏝o )\
+    G.GAME.hands[text].played_this_round = G.GAME.hands[text].played_this_round + 1 + (G.GAME.penis or 0)                  		 -- Airtokers! // >⏝o )\
 '''
