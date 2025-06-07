@@ -413,6 +413,13 @@ SMODS.Atlas {
     py = 95,
 }
 
+SMODS.Atlas {
+    key = "modicon",
+    path = "modicon.png",
+    px = 34,
+    py = 34,
+}
+
 function create_UIBox_Penis()
     local scale = 0.4
     local spacing = 0.13
