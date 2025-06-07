@@ -1299,7 +1299,7 @@ SMODS.Joker {
         G.SHADERS['toum_logarithmic']:send('mouse_screen_pos', {0,0})
         G.SHADERS['toum_logarithmic']:send('hovering', 0)
         G.SHADERS['toum_logarithmic']:send("shadow", false)
-        G.SHADERS['toum_logarithmic']:send("logarithmic", G.TIMERS.REAL * 0.03)
+        G.SHADERS['toum_logarithmic']:send("logarithmic", G.TIMERS.REAL_SHADER * 0.03)
         love.graphics.setShader( G.SHADERS['toum_logarithmic'])
         --love.graphics.setShader()
         card.children.center:set_sprite_pos(card.children.center.sprite_pos)
@@ -2271,6 +2271,7 @@ SMODS.Joker {
             dt = dt / G.SETTINGS.GAMESPEED
         end
         dt = dt * 4 -- my settings have changed my expectations
+        dt = dt * (G.SHADER_TIMESCALE or 1)
         card.angle = card.angle + dt * card.ability.extra.spin_speed
         card.angle = card.angle % (6968 * math.pi) -- causes a brief stutter, so keep it infrequent
         card.T.r = primitive_number(card.angle)
@@ -3451,6 +3452,22 @@ SMODS.Joker{
     atlas = "Airtokers",
     pos = {x = 0, y = 3},
     cost = 4,
+    load = function(self, card, card_table, other_card)
+        G.E_MANAGER:add_event(Event({
+            func = function(t)
+                if card.added_to_deck then
+                    G.SHADER_TIMESCALE = (G.SHADER_TIMESCALE or 1) * -1
+                end
+                return true
+            end,
+        }))
+    end,
+    add_to_deck = function(self, card, from_debuff)
+        G.SHADER_TIMESCALE = (G.SHADER_TIMESCALE or 1) * -1
+    end,
+    remove_from_deck = function(self, card, from_debuff)
+        G.SHADER_TIMESCALE = (G.SHADER_TIMESCALE or 1) * -1
+    end,
 }
 
 --[[
