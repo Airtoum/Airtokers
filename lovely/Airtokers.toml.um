@@ -769,3 +769,12 @@ pattern = "local jokers, triggered = card:calculate_joker(context)"
 payload = '''
 triggered = triggered or context.joker_main and not context.retrigger_joker and card.edition and (card.edition.foil or card.edition.holo or card.edition.polychrome)
 '''
+
+## if you wind up holding a hand in the shop you should still be able to use tarots on it
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+position = "at"
+match_indent = false
+pattern = "if G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.TAROT_PACK or G.STATE == G.STATES.SPECTRAL_PACK or G.STATE == G.STATES.PLANET_PACK or G.STATE == G.STATES.SMODS_BOOSTER_OPENED then"
+payload = "if G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.TAROT_PACK or G.STATE == G.STATES.SPECTRAL_PACK or G.STATE == G.STATES.PLANET_PACK or G.STATE == G.STATES.SMODS_BOOSTER_OPENED or G.STATE == G.STATES.SHOP then"

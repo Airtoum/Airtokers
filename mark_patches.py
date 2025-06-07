@@ -81,7 +81,7 @@ for dirpath, dirnames, filenames in os.walk('.\\lovely'):
                     end_of_payload = False
                 
                 with open(source_filepath.replace('.toml.um', '.toml'), 'w', encoding='utf8') as theoutfile:
-                    theoutfile.write("\n".join(toml_lines))
+                    theoutfile.write("\n".join(toml_lines)+'\n')
 
 
 if len(sys.argv) >= 3:

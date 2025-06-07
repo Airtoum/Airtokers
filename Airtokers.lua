@@ -960,6 +960,22 @@ SMODS.Joker {
     end
 }
 
+function wrapped_with_log10_stub(original_function)
+    return function(e, a2, a3, a4, a5, a6, a7, a8, a9)
+        local original_math_log10 = math.log10
+        math.log10 = function(x, a2, a3, a4, a5, a6, a7, a8, a9)
+            return original_math_log10(number_abs(x), a2, a3, a4, a5, a6, a7, a8, a9)
+        end
+        local return_value = original_function(e, a2, a3, a4, a5, a6, a7, a8, a9)
+        math.log10 = original_math_log10
+        return return_value
+    end
+end
+
+G.FUNCS.hand_mult_UI_set = wrapped_with_log10_stub(G.FUNCS.hand_mult_UI_set)
+G.FUNCS.hand_chip_UI_set = wrapped_with_log10_stub(G.FUNCS.hand_chip_UI_set)
+G.FUNCS.hand_chip_total_UI_set = wrapped_with_log10_stub(G.FUNCS.hand_chip_total_UI_set)
+
 SMODS.Joker {
     key = 'ender_joker',
     loc_txt = {
