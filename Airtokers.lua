@@ -996,7 +996,7 @@ SMODS.Joker {
 }
 
 --- @schema
---- core: function(amount: number) -> nil,
+--- core: function(amount: number, params: {scored_card: Card}) -> nil,
 --- mult?: boolean,  # remember, it's mult = mod_mult(x)
 --- chips?: boolean,  # remember, it's hand_chips = mod_chips(x)
 --- misc?: boolean,
@@ -1011,10 +1011,11 @@ SMODS.Joker {
 --- ['config.type']?: string,
 --- ['config.scale']?: number,
 --- playing_cards_created?: boolean  # triggers playing card joker context (eg hologram)
+--- no_automatic_card_eval_status_text?: boolean
 --- 
 --- template:
 --- Airtokers.custom_effects.new_effect = {
----     core = function(amount) end,
+---     core = function(amount, params) end,
 ---     mult = false,
 ---     chips = false,
 ---     misc = true,
@@ -1036,7 +1037,9 @@ function Airtokers.check_custom_effects(effect, card, percent, mod_percent)
             if custom_effect.mult then hand_text_that_needs_updating.mult = mult end
             if custom_effect.chips then hand_text_that_needs_updating.chips = hand_chips end
             update_hand_text({delay = 0}, hand_text_that_needs_updating)
-            card_eval_status_text(card, custom_effect_name, effect[custom_effect_name], percent)
+            if not custom_effect.no_automatic_card_eval_status_text then
+                card_eval_status_text(card, custom_effect_name, effect[custom_effect_name], percent)
+            end
             mod_percent = true
         end
     end
@@ -1453,7 +1456,9 @@ function SMODS.calculate_individual_effect(effect, scored_card, key, amount, fro
         if custom_effect.mult then hand_text_that_needs_updating.mult = mult end
         if custom_effect.chips then hand_text_that_needs_updating.chips = hand_chips end
         update_hand_text({delay = 0}, hand_text_that_needs_updating)
-        card_eval_status_text(scored_card, key, amt, percent, nil, custom_effect.playing_cards_created and {playing_cards_created = {true}} or nil)
+        if not custom_effect.no_automatic_card_eval_status_text then
+            card_eval_status_text(scored_card, key, amt, percent, nil, custom_effect.playing_cards_created and {playing_cards_created = {true}} or nil)
+        end
         return true
     else
         return original_smods_calculate_individual_effect(effect, scored_card, key, amount, from_edition)
@@ -1679,15 +1684,16 @@ function Card:calculate_joker(context, a2, a3, a4, a5, a6, a7, a8, a9) -- any ex
     if return_value or context.setting_blind or context.ending_shop or context.open_booster then
         local shallow_copy = shallow_copy_table(return_value)
         local pruned_copy = copy_table_but_not_these_classes(shallow_copy, {Object})
-        if return_value == true or context.setting_blind or context.ending_shop or context.open_booster then
-            if last_card_passed_to_card_eval_status_text == self and last_extra_passed_to_card_eval_status_text and last_extra_passed_to_card_eval_status_text.message then
+        if return_value == true or (return_value == nil and (context.setting_blind or context.ending_shop or context.open_booster)) and
+            last_card_passed_to_card_eval_status_text == self and last_extra_passed_to_card_eval_status_text and last_extra_passed_to_card_eval_status_text.message then
                 self.ability.toum_most_recent_trigger = { 
                     message = last_extra_passed_to_card_eval_status_text.message,
                     colour = last_extra_passed_to_card_eval_status_text.colour,
                 }
-            end
         else
-            self.ability.toum_most_recent_trigger = remove_all_properties_of_type_recursively(pruned_copy, 'function')
+            if pruned_copy then
+                self.ability.toum_most_recent_trigger = remove_all_properties_of_type_recursively(pruned_copy, 'function')
+            end
         end
     end
     return return_value
@@ -1736,7 +1742,7 @@ local original_card_eval_status_text = card_eval_status_text
 function card_eval_status_text(card, eval_type, amt, percent, dir, extra, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20)
     last_card_passed_to_card_eval_status_text = card
     last_extra_passed_to_card_eval_status_text = extra
-    if last_extra_passed_to_card_eval_status_text and last_extra_passed_to_card_eval_status_text.message then
+    if last_extra_passed_to_card_eval_status_text and last_extra_passed_to_card_eval_status_text.message and last_card_passed_to_card_eval_status_text then
         last_card_passed_to_card_eval_status_text.ability.toum_most_recent_trigger = last_card_passed_to_card_eval_status_text.ability.toum_most_recent_trigger or { 
             message = last_extra_passed_to_card_eval_status_text.message,
             colour = last_extra_passed_to_card_eval_status_text.colour,
@@ -2838,6 +2844,36 @@ table.insert(final_setups, function ()
 end)
 
 
+Airtokers.custom_effects.draw_additional_hand = {
+    core = function(amount, params)
+        G.E_MANAGER:add_event(Event({
+            func = function(t)
+                G.E_MANAGER:add_event(Event({
+                    func = function(t)
+                        G.E_MANAGER:add_event(Event({
+                            func = function(t)
+                                local message = localize { type = 'variable', key = 'k_plus_cards', vars = { G.hand.config.card_limit } }
+                                card_eval_status_text(params.scored_card, 'extra', nil, nil, nil, { message = message })
+                                local num_cards_already_in_hand = math.max(#G.hand.cards, 3)
+                                for i = 1, G.hand.config.card_limit do 
+                                    draw_card(G.deck,G.hand, (num_cards_already_in_hand + i)*100/num_cards_already_in_hand,'up', true)
+                                end
+                                return true
+                            end
+                        }))
+                        return true
+                    end
+                }))
+                return true
+            end
+        }))
+    end,
+    mult = false,
+    chips = false,
+    misc = true,
+    no_automatic_card_eval_status_text = true,
+}
+
 --- 1 extra hand of cards is drawn when opening booster packs
 SMODS.Joker{
     key = 'card_rack',
@@ -2858,30 +2894,8 @@ SMODS.Joker{
     cost = 2,
     calculate = function(self, card, context)
         if context.open_booster then
-            G.E_MANAGER:add_event(Event({
-                func = function(t)
-                    G.E_MANAGER:add_event(Event({
-                        func = function(t)
-                            G.E_MANAGER:add_event(Event({
-                                func = function(t)
-                                    local message = localize { type = 'variable', key = 'k_plus_cards', vars = { G.hand.config.card_limit } }
-                                    card_eval_status_text(card, 'extra', nil, nil, nil, { message = message })
-                                    local num_cards_already_in_hand = math.max(#G.hand.cards, 1)
-                                    print(num_cards_already_in_hand)
-                                    for i = 1, G.hand.config.card_limit do 
-                                        draw_card(G.deck,G.hand, (num_cards_already_in_hand + i)*100/num_cards_already_in_hand,'up', true)
-                                    end
-                                    return true
-                                end
-                            }))
-                            return true
-                        end
-                    }))
-                    return true
-                end
-            }))
             return {
-                -- something happened!
+                draw_additional_hand = 1,
             }
         end
     end    
