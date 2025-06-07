@@ -10,6 +10,8 @@ Placeholder art is by me
 
 Reaper Blind art is by me
 
+Joker art is by me
+
 SuperCrash.wav is something I made a long time ago using a bunch of sound effects from the Youtube Audio Library. Here is all of the sound effects used in that sound:
 
 ```
