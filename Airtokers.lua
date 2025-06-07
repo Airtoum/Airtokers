@@ -3424,7 +3424,7 @@ SMODS.Joker{
     loc_txt = {
         name = "Antitime",
         text = {
-            "Scoring order is reversed",
+            "Scoring order is {C:attention,E:1,S:1.1}reversed{}",
         },
     },
     config = {
@@ -3906,7 +3906,7 @@ SMODS.Joker {
         text = {
             "Gains a random effect", -- 1
             "when you purchase a {C:attention}Voucher", -- 2
-            "When played hand has exactly {C:attention}3 suits{}:", -- 3
+            "When {C:attention}played{} hand has exactly {C:attention}3 suits{}:", -- 3
             "Converts Chips to {C:chips}Nonary", -- 4
             "{C:chips}Increments digits{} in Chips", -- 5
             "Sets Chips to the {C:chips}Sum of its divisors", --6
