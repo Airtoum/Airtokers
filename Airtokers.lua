@@ -991,7 +991,11 @@ function wrapped_with_log10_stub(original_function)
     return function(e, a2, a3, a4, a5, a6, a7, a8, a9)
         local original_math_log10 = math.log10
         math.log10 = function(x, a2, a3, a4, a5, a6, a7, a8, a9)
-            return original_math_log10(number_abs(x), a2, a3, a4, a5, a6, a7, a8, a9)
+            if not (x == x) or type(x) == 'table' and (x.isNaN and x:isNaN() or (x.m and not (x.m == x.m)) or not (x == x)) then
+                return 1
+            else
+                return original_math_log10(number_abs(x), a2, a3, a4, a5, a6, a7, a8, a9)
+            end
         end
         local return_value = original_function(e, a2, a3, a4, a5, a6, a7, a8, a9)
         math.log10 = original_math_log10
