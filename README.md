@@ -2,7 +2,7 @@
 
 ![A drawing of two Airtoums reaching to each other as the Queen of Spades. This sprite is used for Tomorrow Joker](assets/2x/Airtokers.png)
 
-This is my Balatro mod! Featuring some silly and some mathy effects. Requires Lovely and Steammodded, and should be compatible with Talisman and Cryptid. (I've worked really hard to make it as compatible with Talisman as I can.)
+This is my Balatro mod! Featuring some silly and some mathy effects. Requires [Lovely](https://github.com/ethangreen-dev/lovely-injector) and [Steammodded/SMODS](https://github.com/Steamodded/smods), and should be compatible with [Talisman](https://github.com/SpectralPack/Talisman) and [Cryptid](https://github.com/SpectralPack/Cryptid). (I've worked really hard to make it as compatible with Talisman as I can.) For installation instructions, install Lovely then SMODS. They have pretty good instructions for installing them on their pages. To install Airtokers, place it in the Mods folder within `.../Balatro/Mods/`. On Windows this is in the %AppData% folder.
 
 ## Credits
 
