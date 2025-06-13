@@ -442,13 +442,14 @@ position = "before"
 match_indent = false
 pattern = "if args.type == 'name' then"
 payload = "if not skip_this_element then		 -- Airtokers! // >⏝o )\u005C"
+times = 1
 
 [[patches]]
-[patches.pattern]
+[patches.regex]
 target = "functions/misc_functions.lua"
 position = "before"
 match_indent = false
-pattern = "if args.type == 'name' or args.type == 'text' then return final_line end"
+pattern = "if (args.type == 'name' or |)args.type == 'text' then return final_line end"
 payload = "end -- i hope this doesn't fuck anything up!     		 -- Airtokers! // >⏝o )\u005C"
 
 [[patches]]

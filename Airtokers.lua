@@ -15,14 +15,16 @@ Airtokers.debug = {}
 
 local function test_suite(name, suite)
     local test_suite_label = 'Test suite - '..name .. ': '
-    sendInfoMessage(test_suite_label .. 'start', 'Airtoker-Tests')
+    --sendInfoMessage(test_suite_label .. 'start', 'Airtoker-Tests')
     local start_time = os.clock()
     local status, err = pcall(suite)
+    local status_text = 'o PASS\t'
     if not status then
-        sendInfoMessage(test_suite_label..'failed x ██', 'Airtoker-Tests')
+        --sendInfoMessage(test_suite_label..'failed', 'Airtoker-Tests')
         sendErrorMessage(err, 'Airtoker-Tests')
+        status_text = 'x FAILED\t'
     end
-    sendInfoMessage(string.format(test_suite_label .. 'finished, elapsed time: %.2f', os.clock() - start_time), 'Airtoker-Tests')
+    sendInfoMessage(string.format(status_text.. test_suite_label.. ', elapsed time: %.2f', os.clock() - start_time), 'Airtoker-Tests')
 end
 
 local function primitive_math_sign(n)
@@ -369,7 +371,7 @@ test_suite('sanity checks on numbers', function()
     assert(number(.0) <= number(1.0) )
     assert(number(-.5) <= number(1.0) )
 
-    assert(false)
+    --assert(false)
 end)
 
 --assert(number_greater_than_or_equal(number(1), number(0)))
@@ -1469,7 +1471,7 @@ SMODS.Joker {
     load = function(self, card, card_table, other_card)
         if not self.trigger_requirements then
             self.trigger_requirements = card_table.ability.trigger_requirements_saved
-            print('loaded requirements', tprint(self.trigger_requirements))
+            --print('loaded requirements', tprint(self.trigger_requirements))
         end
     end,
     calculate = function(self, card, context)
@@ -1487,15 +1489,15 @@ SMODS.Joker {
                 local rank = requirement.rank and SMODS.Ranks[requirement.rank]
                 local enhancement = requirement.enhancement and G.P_CENTERS[requirement.enhancement]
                 local matches_requirement = true
-                print('rank.id', rank.id, 'card:get_id()', card:get_id())
-                print('suit.key', suit.key, 'card.base.suit', card.base.suit, 'card:is_suit(suit.key)', card:is_suit(suit.key))
-                print('enhancement.key', enhancement.key, 'card.config.center.key', card.config.center.key)
+                --print('rank.id', rank.id, 'card:get_id()', card:get_id())
+                --print('suit.key', suit.key, 'card.base.suit', card.base.suit, 'card:is_suit(suit.key)', card:is_suit(suit.key))
+                --print('enhancement.key', enhancement.key, 'card.config.center.key', card.config.center.key)
                 if rank and rank.id ~= card:get_id() then matches_requirement = false end
                 if suit and not card:is_suit(suit.key) then matches_requirement = false end
                 if enhancement and not SMODS.has_enhancement(card, enhancement.key) then matches_requirement = false end
                 if matches_requirement then index_of_next_requirement = index_of_next_requirement + 1 end
             end
-            print('exp_joker: index_of_next_requirement', index_of_next_requirement)
+            --print('exp_joker: index_of_next_requirement', index_of_next_requirement)
             if index_of_next_requirement > #self.trigger_requirements then
                 return {
                     exp_mult = card.ability.extra.exp_mult,
@@ -1771,7 +1773,7 @@ function copy_table_but_not_these_classes(O, classes)
         if O.is then
             for i, class in ipairs(classes) do
                 if O:is(class) then
-                    print('found a thing! set nil for a ' .. tostring(class))
+                    --print('found a thing! set nil for a ' .. tostring(class))
                     return nil
                 end
             end
@@ -3058,7 +3060,7 @@ SMODS.Joker{
             ) then
                 matched = true
             end
-            print(card.ability.extra.previous_drawn_rank)
+            --print(card.ability.extra.previous_drawn_rank)
             card.ability.extra.previous_drawn_rank = context.card:get_id()
             if matched then
                 card.ability.extra.distance_mult = card.ability.extra.distance_mult + card.ability.extra.distance_mult_gain
@@ -3384,7 +3386,7 @@ SMODS.Joker{
         end
         pseudoshuffle(ranks, pseudoseed('transmutation'))
         for i, v in ipairs(ranks) do
-            print(tprint(v))
+            --print(tprint(v))
             G.GAME.toum_transmutation_mapping[ranks[i].key] = ranks[(i % #ranks) + 1].key
         end
     end,
@@ -3599,7 +3601,7 @@ SMODS.Joker{
         ) then
             return {
                 x_odds = card.ability.extra.x_odds,
-                card = context.other_card,
+                card = card,
             }
         end
     end,
@@ -3725,6 +3727,7 @@ end
 
 local function convert_to_nonary(n)
     local chips_string = tostring(n)
+    chips_string = string.gsub(chips_string, ',', '')
     local digit_groups = {}
     for digit_group in string.gfind(chips_string, '[%d%.]+') do
         digit_groups[digit_group] = true
@@ -3756,6 +3759,7 @@ test_suite('convert_to_nonary', function()
     assert_equal(convert_to_nonary(6561), number(10000))
     assert_equal(convert_to_nonary(750.7), number(1023.62626262))
     assert_equal(convert_to_nonary(-750.7), number(-1023.62626262))
+    assert_equal(convert_to_nonary(1202), number(1575))
 end)
 
 local wrappedWithNullReturnWarning = function(original_func, name)
@@ -3917,6 +3921,13 @@ Airtokers.custom_effects.koch_snowflake_chips = {
     ['config.scale'] = 0.5,
 }
 
+test_suite('convert_to_nonary + koch_snowflake', function()
+    assert_equal_with_tolerance(convert_to_nonary(1202.49791292), number(1575), 2)
+    assert_equal_with_tolerance(convert_to_nonary(number(1202.49791292)), number(1575), 2)
+    assert_equal_with_tolerance(number(276) ^ number(math.log(4, 3)), number(1202.49791292), 0.01)
+    assert_equal_with_tolerance(convert_to_nonary(number(276) ^ number(math.log(4, 3))), number(1575), 2)
+end)
+
 Airtokers.custom_effects.plus_side_length_of_square_with_area_chips = {
     core = function(amount)
         hand_chips = mod_chips(hand_chips + math.sqrt(hand_chips))
@@ -4041,6 +4052,11 @@ SMODS.Joker {
     calculate = function(self, card, context)
         if context.buying_card and context.card.ability.set == 'Voucher' then
             self:add_effect(card)
+            return {
+                message = localize('k_upgrade_ex'),
+                colour = G.C.CHIPS,
+                card = card
+            }
         end
         if context.joker_main then
             local suit_sets = {}
