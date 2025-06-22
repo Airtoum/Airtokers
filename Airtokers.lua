@@ -1496,7 +1496,7 @@ SMODS.Joker {
         end
     end,
     calculate = function(self, card, context)
-        if context.end_of_round and context.cardarea == G.jokers then
+        if context.end_of_round and context.cardarea == G.jokers and not context.blueprint then
             self:pick_trigger_requirements()
             return {
                 message = localize('k_reset')
@@ -2155,7 +2155,7 @@ SMODS.Joker {
         end
     end,
     calculate = function(self, card, context)
-        if context.selling_card and context.card.ability.toum_most_recent_trigger then
+        if context.selling_card and context.card.ability.toum_most_recent_trigger and not context.blueprint then
             local dangerous_classes = {
                 Object, 
                 Card, CardArea, Tag, Blind, Game, Controller, Event, EventManager, Node, Moveable,
@@ -2166,6 +2166,10 @@ SMODS.Joker {
             local effect = card.ability.extra.remembered_effect
             if effect then
                 self.augment_effect(self, card, effect)
+                return {
+                    message = localize { type = 'variable', key = 'k_pasted_ex' },
+                    colour = G.C.IMPORTANT,
+                }
             end
         end
         if context.joker_main then
@@ -2341,7 +2345,7 @@ SMODS.Joker {
                 xmult = card.ability.extra.xmult,
                 extra = {
                     xmult = Airtokers.cos(card.angle),
-                    extra = {
+                    extra = not context.blueprint and {
                         func = (function(t)
                             G.E_MANAGER:add_event(Event({ 
                                 func = function() 
@@ -2350,7 +2354,7 @@ SMODS.Joker {
                                 end,
                             }))
                         end),
-                    }
+                    } or nil
                 },
             }
         end
@@ -3083,7 +3087,7 @@ SMODS.Joker{
                 distance_mult = card.ability.extra.distance_mult,
             }
         end
-        if context.emplace_card and context.area == G.hand then
+        if context.emplace_card and context.area == G.hand and not context.blueprint then
             local matched = false
             local current_drawn_rank = context.card:get_id()
             if (
@@ -3729,7 +3733,7 @@ SMODS.Joker {
                 [card.ability.extra.current_effect.effect_type] = card.ability.extra.current_effect.amount,
             }
         end
-        if context.after then
+        if context.after and not context.blueprint then
             local choosable_effects = {}
             for i, v in ipairs(card.ability.extra.effect_choices) do
                 if v ~= card.ability.extra.current_effect then
@@ -4107,7 +4111,7 @@ SMODS.Joker {
         }))
     end,
     calculate = function(self, card, context)
-        if context.buying_card and context.card.ability.set == 'Voucher' then
+        if context.buying_card and context.card.ability.set == 'Voucher' and not context.blueprint then
             self:add_effect(card)
             return {
                 message = localize('k_upgrade_ex'),

@@ -49,6 +49,7 @@ return {
             exp_joker_enhancement_qualifier = ' that is a ',
             k_plus_cards = '+#1# cards!',
             k_plus_distance="+#1# Distance",
+            k_pasted_ex="Pasted!",
         },
         dictionary = {
             k_penis="Penises",
