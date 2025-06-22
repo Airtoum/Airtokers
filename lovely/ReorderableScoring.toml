@@ -198,6 +198,8 @@ payload = '''
         end
         SMODS.Mods['Airtokers'].reverse_table(scoring_hand)
         cards_need_unreversed = true
+        global_toum_cards_are_reversed = true
+        global_toum_scoring_hand_for_reversing = scoring_hand
     end
     for i, step in ipairs(scoring_step_order) do
         step()
@@ -210,5 +212,6 @@ payload = '''
             SMODS.Mods['Airtokers'].reverse_table(area.cards)
         end
         SMODS.Mods['Airtokers'].reverse_table(scoring_hand)
+        global_toum_cards_are_reversed = false
     end
 '''

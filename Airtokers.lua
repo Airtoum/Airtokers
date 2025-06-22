@@ -1764,11 +1764,36 @@ end
 local original_calculate_joker = Card.calculate_joker
 function Card:calculate_joker(context, a2, a3, a4, a5, a6, a7, a8, a9) -- any extra arguments another mod might add
     local recusion_depth = 0
+    --- for antitime
+    local claimed_handling_card_reversal = false
+    if global_toum_cards_are_reversed and not global_toum_cards_are_reversed_handled then
+        for _, area in ipairs(SMODS.get_card_areas('playing_cards')) do
+            SMODS.Mods['Airtokers'].reverse_table(area.cards)
+        end
+        for _, area in ipairs(SMODS.get_card_areas('jokers')) do
+            SMODS.Mods['Airtokers'].reverse_table(area.cards)
+        end
+        SMODS.Mods['Airtokers'].reverse_table(global_toum_scoring_hand_for_reversing)
+        global_toum_cards_are_reversed_handled = true
+        claimed_handling_card_reversal = true
+    end
+    ---
     local return_value = original_calculate_joker(self, context, a2, a3, a4, a5, a6, a7, a8, a9)
     if not return_value and self.ability.name == 'Mr. Bones' and not context.end_of_round then
         local context_copy = shallow_copy_table(context)
         context_copy.end_of_round = true
         return_value = original_calculate_joker(self, context_copy, a2, a3, a4, a5, a6, a7, a8, a9)
+    end
+    --- for antitime
+    if claimed_handling_card_reversal then
+        for _, area in ipairs(SMODS.get_card_areas('playing_cards')) do
+            SMODS.Mods['Airtokers'].reverse_table(area.cards)
+        end
+        for _, area in ipairs(SMODS.get_card_areas('jokers')) do
+            SMODS.Mods['Airtokers'].reverse_table(area.cards)
+        end
+        SMODS.Mods['Airtokers'].reverse_table(global_toum_scoring_hand_for_reversing)
+        global_toum_cards_are_reversed_handled = false
     end
     --- for scrapbook
     if return_value or context.setting_blind or context.ending_shop or context.open_booster then
@@ -4151,6 +4176,7 @@ SMODS.Joker {
 ------ After normal scoring ends, the numbers in this card do not reset, so you may desync this chips with the normal chips.
 ------ Setting chips from selecting a hand only updates this card's chip score when this card's chip score is 0.
 --- A joker that makes things a lot cheaper, but "turns off the lights." Do `SMODS.DrawSteps['center'].func = function() end` to see what I mean
+--- A first place ribbon Joker that gives you something when you score more than is required for a blind
 
 
 
