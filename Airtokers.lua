@@ -512,6 +512,9 @@ SMODS.Joker {
     atlas = "Airtokers",
     pos = {x = 0, y = 0},
     cost = 2,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = true,
     calculate = function(self, card, context)
         if context.joker_main then
             return {
@@ -542,6 +545,9 @@ SMODS.Joker {
     atlas = "Airtokers",
     pos = {x = 1, y = 0},
     cost = 5,
+    blueprint_compat = false,
+    eternal_compat = true,
+    perishable_compat = true,
 }
 
 -- saving hook
@@ -762,6 +768,9 @@ SMODS.Joker {
     pos = {x = 2, y = 0},
     -- swallows 1 card from your deck when blind is selected. when sold, returns all swallowed cards back to your deck 
     cost = 4,
+    blueprint_compat = false,
+    eternal_compat = true, -- I considered false but it might be funny to have an eternally hungry joker
+    perishable_compat = true,
     set_ability = function(self, card, initial, delay_sprites)
         card.swallowed = CardArea(0, 0, 0, 0, {card_limit = 500, type = 'deck'})
         -- perhaps incorporate the offset and scale into the final design of the card. leave a hole in the art?
@@ -974,6 +983,9 @@ SMODS.Joker {
     atlas = "Airtokers",
     pos = {x = 3, y = 0},
     cost = 6,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = true,
     set_ability = function(self, card, initial, delay_sprites)
         --card.ability.extra.mult = self.config.extra.mult:clone()
     end,
@@ -1040,6 +1052,9 @@ SMODS.Joker {
     atlas = "Airtokers",
     pos = {x = 4, y = 0},
     cost = 3,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = true,
     calculate = function(self, card, context)
         if context.joker_main then
             return {
@@ -1242,6 +1257,9 @@ SMODS.Joker {
     atlas = "Airtokers",
     pos = {x = 0, y = 1},
     cost = 3,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = true,
     calculate = function(self, card, context)
         if context.other_joker and G.GAME.current_round.hands_left == 0 then
             local my_pos = nil
@@ -1445,6 +1463,9 @@ SMODS.Joker {
     atlas = "Airtokers",
     pos = {x = 1, y = 1},
     cost = 3,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = false,
     pick_trigger_requirements = function(self)
         self.trigger_requirements = {}
         for i = 1, 3 do
@@ -1590,6 +1611,9 @@ SMODS.Joker {
     atlas = "Airtokers",
     pos = {x = 2, y = 1},
     cost = 7,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = true,
     arrive = function(card, death_card)
         local prior_gamespeed = G.SETTINGS.GAMESPEED
         card.ability.extra.arrived = true
@@ -2067,6 +2091,9 @@ SMODS.Joker {
     atlas = "Airtokers",
     pos = {x = 3, y = 1},
     cost = 7,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = true,
     augment_effect = function(self, card, effect)
         if not effect then return end
         local amount = nil
@@ -2267,6 +2294,9 @@ SMODS.Joker {
     atlas = "SpinToWin",
     pos = {v = 7, y = 0},
     cost = 5,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = true,
     --set_sprites = function(self, card, front)
     --    card.children.center
     --end,
@@ -2910,6 +2940,9 @@ SMODS.Joker {
     atlas = "Airtokers",
     pos = {x = 0, y = 2},
     cost = 3,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = true,
     calculate = function(self, card, context)
         if context.joker_main then
             return {
@@ -2977,6 +3010,9 @@ SMODS.Joker{
     atlas = "CardRack",
     pos = {x = 1, y = 1},
     cost = 2,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = true,
     calculate = function(self, card, context)
         if context.open_booster then
             return {
@@ -3038,6 +3074,9 @@ SMODS.Joker{
     atlas = "Airtokers",
     pos = {x = 2, y = 2},
     cost = 4,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = true,
     calculate = function(self, card, context)
         if context.joker_main then
             return {
@@ -3219,6 +3258,9 @@ SMODS.Joker{
     atlas = "Airtokers",
     pos = {x = 3, y = 2},
     cost = 8,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = true,
     custom_check_for_buy_space = function(self, card, is_negative)
         if not (#G.jokers.cards < G.jokers.config.card_limit + (is_negative and 1 or 0)) then
             alert_no_space(card, G.jokers)
@@ -3378,6 +3420,9 @@ SMODS.Joker{
     atlas = "Airtokers",
     pos = {x = 4, y = 2},
     cost = 7,
+    blueprint_compat = true, -- funny
+    eternal_compat = true,
+    perishable_compat = true,
     start_of_run_setup = function(self)
         G.GAME.toum_transmutation_mapping = {}
         local ranks = {}
@@ -3469,6 +3514,9 @@ SMODS.Joker{
     atlas = "Airtokers",
     pos = {x = 0, y = 3},
     cost = 4,
+    blueprint_compat = false,
+    eternal_compat = true,
+    perishable_compat = true,
     load = function(self, card, card_table, other_card)
         G.E_MANAGER:add_event(Event({
             func = function(t)
@@ -3590,6 +3638,9 @@ SMODS.Joker{
     atlas = "Airtokers",
     pos = {x = 1, y = 3},
     cost = 1,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = true,
     calculate = function(self, card, context)
         if (
             context.individual and
@@ -3657,6 +3708,9 @@ SMODS.Joker {
     display_size = { w = 71, h = 113 },
     --pixel_size = { w = 71, h = 113 },
     cost = 0,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = true,
     set_ability = function(self, card, initial, delay_sprites)
         G.E_MANAGER:add_event(Event({
             func = (function(t)
@@ -4041,6 +4095,9 @@ SMODS.Joker {
     atlas = "Airtokers",
     pos = {x = 3, y = 3},
     cost = 7,
+    blueprint_compat = true,
+    eternal_compat = true,
+    perishable_compat = true,
     set_ability = function(self, card, initial, delay_sprites)
         G.E_MANAGER:add_event(Event({
             func = (function(t)
