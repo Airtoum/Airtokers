@@ -2149,7 +2149,7 @@ SMODS.Joker {
         end
         amount = matches_localized(effect.message, 'a_hands') or effect.extra and matches_localized(effect.extra.message, 'a_hands')
         if amount then
-            append_effect_to_tower(effect, { toum_plus_hands = primitive_number(math.min(amount, number(0.75))) }) -- apologies, but this infinite is not fun. you can cheese this with more than one scrapbook though, which is okay by me
+            append_effect_to_tower(effect, { toum_plus_hands = primitive_number(amount) })
             if matches_localized(effect.message, 'a_hands') then effect.message = nil end
             if effect.extra and matches_localized(effect.extra.message, 'a_hands') then effect.extra.message = nil end
         end
