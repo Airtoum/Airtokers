@@ -4196,5 +4196,34 @@ for _, func in ipairs(final_setups) do
     func()
 end
 
+
+
+Airtokers.regression_tests = {
+    {
+        jokers = {'j_toum_elevator', 'j_splash'},
+        play = {'H_K', 'H_2', 'H_K'},
+        expect = {
+            score = (10 + 10 + 10 + 2) * (2 + 8 + 8)
+        }
+    },
+    {
+        jokers = {'j_toum_boundary_stone'},
+        play = {'H_2'},
+        hand = {'H_2'},
+        expect = {
+            score = (5 + 2) * (math.abs(6 - 1))
+        }
+    },
+    {
+        jokers = {'j_midas_mask', 'j_vampire', 'j_toum_eulers_curse'},
+        play = {'H_K', 'S_K', 'S_K', 'H_9', 'H_9'},
+        expect = {
+            score = 40 * 52
+        }
+    },
+}
+
+
+
 ----------------------------------------------
 ------------MOD CODE END----------------------
