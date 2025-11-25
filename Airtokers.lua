@@ -1867,7 +1867,7 @@ local original_card_eval_status_text = card_eval_status_text
 function card_eval_status_text(card, eval_type, amt, percent, dir, extra, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20)
     last_card_passed_to_card_eval_status_text = card
     last_extra_passed_to_card_eval_status_text = extra
-    if last_extra_passed_to_card_eval_status_text and last_extra_passed_to_card_eval_status_text.message and last_card_passed_to_card_eval_status_text then
+    if last_extra_passed_to_card_eval_status_text and last_extra_passed_to_card_eval_status_text.message and last_card_passed_to_card_eval_status_text and last_card_passed_to_card_eval_status_text.ability then
         last_card_passed_to_card_eval_status_text.ability.toum_most_recent_trigger = last_card_passed_to_card_eval_status_text.ability.toum_most_recent_trigger or { 
             message = last_extra_passed_to_card_eval_status_text.message,
             colour = last_extra_passed_to_card_eval_status_text.colour,
