@@ -4200,25 +4200,68 @@ end
 
 Airtokers.regression_tests = {
     {
-        jokers = {'j_toum_elevator', 'j_splash'},
-        play = {'H_K', 'H_2', 'H_K'},
-        expect = {
-            score = (10 + 10 + 10 + 2) * (2 + 8 + 8)
+        name = 'Elevator',
+        actions = {
+            { action = 'Select_Blind', args = 'small' },
+            { action = 'Destroy_All_Cards' },
+            { action = 'Create_Cards', args = {
+                jokers = {'j_toum_elevator', 'j_splash'},
+                selected = {'H_K', 'H_2', 'H_K'},
+            }},
+            { action = 'Play_Hand' },
+            { action = 'Expect', args = {
+                score = (10 + 10 + 10 + 2) * (2 + 8 + 8)
+            }},
         }
     },
     {
-        jokers = {'j_toum_boundary_stone'},
-        play = {'H_2'},
-        hand = {'H_2'},
-        expect = {
-            score = (5 + 2) * (math.abs(6 - 1))
+        name = 'Boundary Stone, Custom Effects, Distance Mult',
+        actions = {
+            { action = 'Select_Blind', args = 'small' },
+            { action = 'Destroy_All_Cards' },
+            { action = 'Create_Cards', args = {
+                jokers = {'j_toum_boundary_stone'},
+                selected = {'H_2'},
+                hand = {'H_2'},
+            }},
+            { action = 'Play_Hand' },
+            { action = 'Expect', args = {
+                score = (5 + 2) * (math.abs(6 - 1))
+            }},
         }
     },
     {
-        jokers = {'j_midas_mask', 'j_vampire', 'j_toum_eulers_curse'},
-        play = {'H_K', 'S_K', 'S_K', 'H_9', 'H_9'},
-        expect = {
-            score = 40 * 52
+        name = 'Euler\'s Curse, Euler\'s Totient Function Chips, LCM Mult',
+        actions = {
+            { action = 'Select_Blind', args = 'small' },
+            { action = 'Destroy_All_Cards' },
+            { action = 'Create_Cards', args = {
+                jokers = {'j_midas_mask', 'j_vampire', 'j_toum_eulers_curse'},
+                selected = {'H_K', 'S_K', 'S_K', 'H_9', 'H_9'},
+            }},
+            { action = 'Play_Hand' },
+            { action ='Expect', args = {
+                score = 40 * 52
+            }},
+        }
+    },
+    {
+        name = 'Purchase Elevator',
+        actions = {
+            { action = 'Select_Blind', args = 'small' },
+            { action = 'Win_Blind' },
+            { action = 'Cash_Out' },
+            { action = 'Destroy_Shop' },
+            { action = 'Create_Shop', args = {
+                jokers = {'j_toum_elevator', 'j_blueprint'},
+                vouchers = {'v_antimatter'},
+                boosters = {'p_arcana_mega_2', 'p_arcana_mega_2'}
+            }},
+            { action = 'Buy_From_Shop', { key = 'j_toum_elevator' }},
+            { action = 'Expect', args = {
+                jokers = { 'j_toum_elevator' },
+                consumeables = { 'c_toum_counterweight' }
+            }},
         }
     },
 }
