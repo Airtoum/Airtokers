@@ -4249,6 +4249,7 @@ Airtokers.regression_tests = {
         name = 'Purchase Elevator',
         actions = {
             { action = 'Select_Blind', args = 'small' },
+            { action = 'Set_Money', args = 30 },
             { action = 'Win_Blind' },
             { action = 'Cash_Out' },
             { action = 'Destroy_Shop' },
@@ -4257,10 +4258,28 @@ Airtokers.regression_tests = {
                 vouchers = {'v_antimatter'},
                 boosters = {'p_arcana_mega_2', 'p_arcana_mega_2'}
             }},
-            { action = 'Buy_From_Shop', { key = 'j_toum_elevator' }},
+            { action = 'Buy_From_Shop', args = { key = 'j_toum_elevator' }},
             { action = 'Expect', args = {
                 jokers = { 'j_toum_elevator' },
-                consumeables = { 'c_toum_counterweight' }
+                consumeables = { 'c_toum_counterweight' },
+            }},
+            { action = 'Sell_Consumeable', args = { key = 'c_toum_counterweight' }},
+            { action = 'Expect', args = {
+                jokers = {},
+                consumeables = {},
+            }},
+            { action = 'Destroy_Shop' },
+            { action = 'Create_Shop', args = {
+                jokers = {'j_toum_elevator', 'j_blueprint', 'c_earth', 'c_earth'},
+                vouchers = {'v_antimatter'},
+                boosters = {'p_arcana_mega_2', 'p_arcana_mega_2'}
+            }},
+            { action = 'Buy_From_Shop', args = { key = 'c_earth' }},
+            { action = 'Buy_From_Shop', args = { key = 'c_earth' }},
+            { action = 'Buy_From_Shop', args = { key = 'j_toum_elevator' }},
+            { action = 'Expect', args = {
+                jokers = {},
+                consumeables = {'c_earth', 'c_earth'},
             }},
         }
     },
