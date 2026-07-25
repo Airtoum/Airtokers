@@ -247,6 +247,15 @@ match_indent = false
 pattern = "shadow = args.shadow,"
 payload = "y_offset = (part.control.y and tonumber(part.control.y) or 0),"
 
+## Create control character y for setting vertical offest (SMODS fix)
+[[patches]]
+[patches.pattern]
+target = '''=[SMODS _ "src/utils.lua"]'''
+position = "at"
+match_indent = false
+pattern = "y_offset = args.y_offset or -0.6,"
+payload = "y_offset = -0.6 + (part.control.y and tonumber(part.control.y) or 0),"
+
 ## Use localization construction for attention text
 #[[patches]]
 #[patches.pattern]
@@ -268,18 +277,51 @@ payload = '''elseif args.type == 'variable_attention_text' then
     loc_target = G.localization.misc.v_dictionary_parsed[args.key]'''
 
 ## Permit use of localize function for Attention Text
-[[patches]]
-[patches.pattern]
-target = "functions/misc_functions.lua"
-position = "at"
-match_indent = false
-pattern = "for _, lines in ipairs(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or (args.type == 'text' or args.type == 'tutorial' or args.type == 'quips') and loc_target or loc_target.text_parsed) do"
-payload = "for _, lines in ipairs(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or (args.type == 'text' or args.type == 'tutorial' or args.type == 'quips') and loc_target or (args.type == 'variable_attention_text' and {loc_target}) or loc_target.text_parsed) do"
+#[[patches]]
+#[patches.regex]
+#target = "functions/misc_functions.lua"
+#position = "at"
+#match_indent = false
+#pattern = "for _, lines in ipairs\\(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or (?<condition>\\(args.type == 'text' or args.type == 'tutorial' or args.type == 'quips'\\)|args.type == 'text') and loc_target or loc_target.text_parsed\\) do"
+#payload = '''for _, lines in ipairs(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or ($condition) and loc_target or (args.type == 'variable_attention_text' and {loc_target}) or loc_target.text_parsed) do
+#    table.insert(lines_array, lines)
+#end
+#-- Replaces the lines of the displayed text with a sequence of lines selected by these indices from the original lines table, if dictionary_indices is defined.
+#if args.vars and args.vars.dictionary_indices then
+#    local new_lines_array = {}
+#    for _, line_index in ipairs(args.vars.dictionary_indices) do
+#        table.insert(new_lines_array, lines_array[line_index])
+#    end
+#    lines_array = new_lines_array
+#end
+#for _, lines in ipairs(lines_array) do
+#local line_number = _
+#'''
 
 ## Permit use of localize function for Attention Text
 [[patches]]
 [patches.pattern]
 target = "functions/misc_functions.lua"
+position = "before"
+match_indent = false
+pattern = "elseif part.control.E then"
+payload = '''elseif args.type == 'variable_attention_text' then -- inject start
+          final_line[#final_line+1] = {n=G.UIT.O, config={
+            object = DynaText({string = {assembled_string}, colours = {part.control.V and args.vars.colours[tonumber(part.control.V)] or (part.control.C and loc_colour(part.control.C)) or args.colour or loc_colour(nil)},
+            silent = true,
+            float = true,
+            shadow = true,
+            pop_in = 0,
+            pop_in_rate = 6,
+            maxw = args.maxw,
+            y_offset = (part.control.y and tonumber(part.control.y) or 0),
+            scale = (args.scale or 1)*(part.control.s and tonumber(part.control.s) or 1)})
+          }} -- inject end'''
+
+## Permit use of localize function for Attention Text (SMODS)
+[[patches]]
+[patches.pattern]
+target = '''=[SMODS _ "src/utils.lua"]'''
 position = "before"
 match_indent = false
 pattern = "elseif part.control.E then"
@@ -435,22 +477,76 @@ if part.control.o and args.vars[tonumber(part.control.o)] then  -- o for "omit i
 end
 '''
 
-[[patches]]
-[patches.pattern]
-target = "functions/misc_functions.lua"
-position = "before"
-match_indent = false
-pattern = "if args.type == 'name' then"
-payload = "if not skip_this_element then"
-times = 1
-
+# Make DynaText with a table possible for loc_vars
 [[patches]]
 [patches.regex]
-target = "functions/misc_functions.lua"
+target = '''=[SMODS _ "src/utils.lua"]'''
 position = "before"
 match_indent = false
-pattern = "if (args.type == 'name' or |)args.type == 'text' then return final_line end"
-payload = "end -- i hope this doesn't fuck anything up!"
+pattern = "local desc_scale = .+DESCSCALE"
+payload = '''
+-- pass to vars table with a boolean to skip adding this line. referenced by index in vars
+if part.control.o then  -- o for "Omit if"
+    final_line.skip_this_line = final_line.skip_this_line or args.vars[tonumber(part.control.o)]
+end
+-- local skip_this_element = false
+-- -- pass to vars table with a boolean to skip adding this element. referenced by index in vars
+-- if part.control.o and args.vars[tonumber(part.control.o)] then  -- o for "omit if"
+--     skip_this_element = true
+-- end
+if part.control.D then 
+    assembled_string = args.vars[tonumber(part.control.D)]
+end
+'''
+
+#[[patches]]
+#[patches.pattern]
+#target = "functions/misc_functions.lua"
+#position = "before"
+#match_indent = false
+#pattern = "if args.type == 'name' then"
+#payload = "if not skip_this_element then"
+#times = 1
+#
+#[[patches]]
+#[patches.regex]
+#target = "functions/misc_functions.lua"
+#position = "before"
+#match_indent = false
+#pattern = "if (args.type == 'name' or |)args.type == 'text' then return final_line end"
+#payload = '''
+#    end -- i hope this doesn't fuck anything up!
+#'''
+
+#[[patches]]
+#[patches.pattern]
+#target = '''=[SMODS _ "src/utils.lua"]'''
+#position = "before"
+#match_indent = false
+#pattern = "if args.type == 'name' then"
+#payload = "if not skip_this_element then"
+#times = 1
+#
+#[[patches]]
+#[patches.regex]
+#target = '''=[SMODS _ "src/utils.lua"]'''
+#position = "before"
+#match_indent = false
+#pattern = '''end
+#    return final_line'''
+#payload = '''
+#    end -- i hope this doesn't fuck anything up!
+#'''
+
+#[[patches]]
+#[patches.pattern]
+#target = "functions/misc_functions.lua"
+#position = "at"
+#match_indent = false
+#pattern = "args.nodes[#args.nodes+1] = final_line"
+#payload = '''if not skip_this_line then
+#    args.nodes[#args.nodes+1] = final_line
+#end'''
 
 [[patches]]
 [patches.pattern]
@@ -458,7 +554,8 @@ target = "functions/misc_functions.lua"
 position = "at"
 match_indent = false
 pattern = "args.nodes[#args.nodes+1] = final_line"
-payload = '''if not skip_this_line then
+payload = '''if not final_line.skip_this_line then
+    final_line.skip_this_line = nil
     args.nodes[#args.nodes+1] = final_line
 end'''
 
@@ -599,12 +696,12 @@ payload = '''
 
 # Line numbers for localization function
 [[patches]]
-[patches.pattern]
+[patches.regex]
 target = "functions/misc_functions.lua"
 position = "after"
 match_indent = false
-pattern = "local final_line = {}"
-payload = "local line_number = _"
+pattern = "(local final_line = \\{\\}|local final_line = SMODS.localize_box\\(line, args\\))"
+payload = "\nlocal line_number = _"
 
 # Variable number of lines for localization
 [[patches]]
@@ -618,9 +715,11 @@ payload = "local lines_array = {}"
 [[patches]]
 [patches.pattern]
 target = "functions/misc_functions.lua"
-position = "before"
+position = "after"
 match_indent = false
-pattern = "local final_line = {}"
+#pattern = "for _, lines in ipairs\\(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or (?<condition>\\(args.type == 'text' or args.type == 'tutorial' or args.type == 'quips'\\)) and loc_target or loc_target.text_parsed\\) do"
+pattern = "for _, lines in ipairs(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or (args.type == 'text' or args.type == 'tutorial' or args.type == 'quips') and loc_target or loc_target.text_parsed) do"
+#pattern = "(local final_line = \\{\\}|local final_line = SMODS.localize_box\\(line, args\\))"
 payload = '''
     table.insert(lines_array, lines)
 end
@@ -633,6 +732,8 @@ if args.vars and args.vars.dictionary_indices then
     lines_array = new_lines_array
 end
 for _, lines in ipairs(lines_array) do
+local line_number = _
+args.line_number = _
 '''
 
 [[patches]]
@@ -640,11 +741,29 @@ for _, lines in ipairs(lines_array) do
 target = "functions/misc_functions.lua"
 position = "after"
 match_indent = false
-pattern = "for _, subpart in ipairs(part.strings) do"
+pattern = "for _, lines in ipairs(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or args.type == 'text' and loc_target or loc_target.text_parsed) do"
+payload = '''local line_number = _'''
+
+[[patches]]
+[patches.pattern]
+target = '''=[SMODS _ "src/utils.lua"]'''
+position = "after"
+match_indent = false
+pattern = "for _, lines in ipairs(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or args.type == 'text' and loc_target or loc_target.text_parsed) do"
+payload = '''local line_number = _'''
+
+[[patches]]
+[patches.regex]
+#target = "functions/misc_functions.lua"
+target = '''=[SMODS _ "src/utils.lua"]'''
+position = "before"
+match_indent = false
+#pattern = "for _, subpart in ipairs(part.strings) do"
+pattern = "assembled_string = assembled_string\\.\\..+"
 payload = '''
     -- define line_vars to create a variable context for each individual line, indexed by its line number.
-    if type(subpart) ~= 'string' and args.vars and args.vars.line_vars and args.vars.line_vars[line_number] then
-        subpart = format_ui_value(args.vars.line_vars[line_number][tonumber(subpart[1])])
+    if type(subpart) ~= 'string' and args.vars and args.vars.line_vars and args.vars.line_vars[line_number or args.line_number] then
+        subpart = format_ui_value(args.vars.line_vars[line_number or args.line_number][tonumber(subpart[1])])
     end
 '''
 

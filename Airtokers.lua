@@ -1029,8 +1029,8 @@ SMODS.Joker {
             "Gives {C:red}#3##1#{} Mult",
             "Loses {C:red}#2#{} Mult each",
             "time you read this",
-            "{O:6,s:0.8,C:inactive}(Min of {s:0.8,C:mult}#4#{s:0.8,C:inactive})",
-            "{O:7,s:0.8,C:inactive}(Max of {s:0.8,C:mult}#5#{s:0.8,C:inactive})",
+            "{o:6,s:0.8,C:inactive}(Min of {s:0.8,C:mult}#4#{s:0.8,C:inactive})",
+            "{o:7,s:0.8,C:inactive}(Max of {s:0.8,C:mult}#5#{s:0.8,C:inactive})",
         },
     },
     config = { extra = { mult = number(17), mult_gain = number(-3) * 1, mult_min = number(-60), mult_max = number(60) }},
@@ -1293,14 +1293,14 @@ SMODS.Joker {
     end,
     draw = function(self, card, layer)
         local working_canvas = card.children.center.canvas
-        love.graphics.setCanvas(working_canvas)
+        love.graphics.setCanvas{working_canvas, stencil=true}
         love.graphics.clear(0,0,0,0)
         --card.children.center.canvas = nil -- lest it try to draw its canvas on itself! this lets it fallback to the atlas
         --card.children.center:draw_shader('toum_logarithmic', nil, 2.0)
         local moveable = card.children.center
         love.graphics.push()
         love.graphics.reset()
-        love.graphics.setCanvas(working_canvas)
+        love.graphics.setCanvas{working_canvas, stencil=true}
         --[[
         love.graphics.scale(G.TILESCALE*G.TILESIZE)
         love.graphics.translate(
@@ -1335,7 +1335,7 @@ SMODS.Joker {
         )
         --card.children.center.canvas = working_canvas
         love.graphics.pop()
-        love.graphics.setCanvas(G.CANVAS)
+        love.graphics.setCanvas{G.CANVAS, stencil = true}
         love.graphics.setShader()
     end,
     set_sprites = function(self, card, front)
@@ -1423,7 +1423,7 @@ SMODS.Joker {
             "{C:attention}#12#{}#13#{V:3}#14#{}#15#{C:attention}#16#{}",
             "in that order.",
             "{s:0.8,C:inactive}(Changes each round)",
-            "{s:0.8,C:inactive,O:24}#17#{s:0.8,C:red}#18#{s:0.8,C:inactive}#19#{s:0.8,C:red}#20#{s:0.8,C:inactive}#21#",
+            "{s:0.8,C:inactive,o:24}#17#{s:0.8,C:red}#18#{s:0.8,C:inactive}#19#{s:0.8,C:red}#20#{s:0.8,C:inactive}#21#",
         },
     },
     -- yes_pool_flag = 'disabled_for_now',
@@ -3283,7 +3283,7 @@ SMODS.Joker{
             "Each scored card gives {C:mult}+Mult",
             "equal to how different its {C:chips}Chips{} value is",
             "from the previous scored card",
-            "{s:0.8,C:inactive,O:1}(Needs a consumable slot for installation)",
+            "{s:0.8,C:inactive,o:1}(Needs a consumable slot for installation)",
         },
     },
     config = {
@@ -3703,16 +3703,16 @@ SMODS.Joker {
     loc_txt = {
         name = "Menu",
         text = {
-            "{O:1}Converts Chips from {C:chips}Radians to degrees",
-            "{O:2}Converts Chips from {C:chips}Degrees to radians",
-            "{O:3}Applies {C:chips}Sign{} to Chips",
-            "{O:4}Applies {C:chips}Successor{} to Chips",
-            "{O:5,C:chips}Negates{} Chips",
-            "{O:6,C:chips}Inverts digits{} in Chips",
-            "{O:7,C:chips}Reverses digits{} in Chips",
-            "{O:8}Applies {C:chips}Euler's totient function{} to Chips",
-            "{O:9}Applies {C:chips}Absolute value{} to Chips",
-            "{O:10,C:chips}Increments digits{} in Chips",
+            "{o:1}Converts Chips from {C:chips}Radians to degrees",
+            "{o:2}Converts Chips from {C:chips}Degrees to radians",
+            "{o:3}Applies {C:chips}Sign{} to Chips",
+            "{o:4}Applies {C:chips}Successor{} to Chips",
+            "{o:5,C:chips}Negates{} Chips",
+            "{o:6,C:chips}Inverts digits{} in Chips",
+            "{o:7,C:chips}Reverses digits{} in Chips",
+            "{o:8}Applies {C:chips}Euler's totient function{} to Chips",
+            "{o:9}Applies {C:chips}Absolute value{} to Chips",
+            "{o:10,C:chips}Increments digits{} in Chips",
             "Effect changes after hand is played",
         },
     },
