@@ -3231,7 +3231,7 @@ function Card:elevator_crash()
     local fall_distance = 14
     G.E_MANAGER:add_event(Event({
         trigger = 'ease',
-        ease = 'quad_reverse',
+        ease = 'outquad',
         blockable = false,
         ref_table = self.T,
         ref_value = 'y',
@@ -3241,7 +3241,7 @@ function Card:elevator_crash()
     }))
     G.E_MANAGER:add_event(Event({
         trigger = 'ease',
-        ease = 'quad_reverse',
+        ease = 'outquad',
         blockable = false,
         ref_table = self.VT,
         ref_value = 'y',
