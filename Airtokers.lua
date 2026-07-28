@@ -1553,27 +1553,35 @@ function SMODS.calculate_individual_effect(effect, scored_card, key, amount, fro
 end
 
 table.insert(final_setups, function()
-    if SMODS.Scoring_Parameters then
-        for custom_effect_name, custom_effect in pairs(Airtokers.custom_effects) do
-            SMODS.Scoring_Parameter({
-                key = custom_effect_name,
-                default_value = 0,
-                calculation_keys = {custom_effect_name}
-            })
-        end
-        return
-    end
-    local index_of_extra = nil
-    for i, calc_key in ipairs(SMODS.calculation_keys) do
-        if calc_key == 'extra' then
-            index_of_extra = i
-            break
-        end
-    end
-    -- extra must happen after my custom effects.
-    assert(index_of_extra, "Could not find calculation key 'extra' in SMODS.calculation_keys. :(")
+    -- if SMODS.Scoring_Calculations then
+    --     for custom_effect_name, custom_effect in pairs(Airtokers.custom_effects) do
+    --         if true then
+    --             SMODS.Scoring_Calculation({
+    --                 key = custom_effect_name,
+    --                 func = function (self, chips, mult, flames)
+    --                     return 0
+    --                 end,
+    --                 default_value = 0,
+    --                 calculation_keys = {custom_effect_name}
+    --             })
+    --         end
+    --     end
+    --     return
+    -- end
+    -- local index_of_extra = nil
+    -- for i, calc_key in ipairs(SMODS.calculation_keys) do
+    --     if calc_key == 'extra' then
+    --         index_of_extra = i
+    --         break
+    --     end
+    -- end
+    -- -- extra must happen after my custom effects.
+    -- assert(index_of_extra, "Could not find calculation key 'extra' in SMODS.calculation_keys. :(")
+    -- for custom_effect_name, custom_effect in pairs(Airtokers.custom_effects) do
+    --     table.insert(SMODS.calculation_keys, index_of_extra, custom_effect_name)
+    -- end
     for custom_effect_name, custom_effect in pairs(Airtokers.custom_effects) do
-        table.insert(SMODS.calculation_keys, index_of_extra, custom_effect_name)
+        table.insert(SMODS.scoring_parameter_keys, custom_effect_name)
     end
 end)
 
