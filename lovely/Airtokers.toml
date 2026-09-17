@@ -277,13 +277,13 @@ payload = '''elseif args.type == 'variable_attention_text' then                 
     loc_target = G.localization.misc.v_dictionary_parsed[args.key]              		 -- Airtokers! // >⏝o )\'''
 
 ## Permit use of localize function for Attention Text
-#[[patches]]
-#[patches.regex]
-#target = "functions/misc_functions.lua"
-#position = "at"
-#match_indent = false
-#pattern = "for _, lines in ipairs\\(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or (?<condition>\\(args.type == 'text' or args.type == 'tutorial' or args.type == 'quips'\\)|args.type == 'text') and loc_target or loc_target.text_parsed\\) do"
-#payload = '''for _, lines in ipairs(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or ($condition) and loc_target or (args.type == 'variable_attention_text' and {loc_target}) or loc_target.text_parsed) do
+[[patches]]
+[patches.regex]
+target = "functions/misc_functions.lua"
+position = "at"
+match_indent = false
+pattern = "for _, lines in ipairs\\(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or (?<condition>\\(args.type == 'text' or args.type == 'tutorial' or args.type == 'quips'\\)|args.type == 'text') and loc_target or loc_target.text_parsed\\) do"
+payload = '''for _, lines in ipairs(args.type == 'unlocks' and loc_target.unlock_parsed or args.type == 'name' and loc_target.name_parsed or ($condition) and loc_target or (args.type == 'variable_attention_text' and {loc_target}) or loc_target.text_parsed) do'''
 #    table.insert(lines_array, lines)
 #end
 #-- Replaces the lines of the displayed text with a sequence of lines selected by these indices from the original lines table, if dictionary_indices is defined.
